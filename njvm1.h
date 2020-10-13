@@ -12,4 +12,6 @@
 #define wrint 8
 #define rdchr 9
 #define wrchr 10
+#define IMMEDIATE(x) ((x)&0x00FFFFFF)
+#define SIGN_EXTEND(i) ((i)&0x00800000 ? (i) | 0xFF000000 : (i))
 #endif
