@@ -33,7 +33,7 @@ void listen(unsigned int programSpeicher[], int arrayLength)
     {
         instruction = programSpeicher[programmCounter];
         opcode = instruction >> 24;
-        immediateWert = IMMEDIATE(programSpeicher[programmCounter]);
+        immediateWert = SIGN_EXTEND(IMMEDIATE(programSpeicher[programmCounter]));
         if (opcode == halt)
         {
             printf("%03d\t halt\n", programmCounter);
@@ -194,7 +194,7 @@ int main(int argc, char *argv[])
         {
             printf("Ninja Virtual Machine started\n");
             unsigned int programmSpeicher[] = {
-                (pushc << 24) | SIGN_EXTEND(-2),
+                (pushc << 24) | IMMEDIATE(SIGN_EXTEND(-2)),
                 (rdint << 24),
                 (mul << 24),
                 (pushc << 24) | IMMEDIATE(3),
