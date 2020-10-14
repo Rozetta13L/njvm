@@ -272,6 +272,10 @@ int main(int argc, char *argv[])
             printf("Ninja Virtual Machine stopped\n");
         }
     }
+    else
+    {
+        printf("Error: no program selected");
+    }
 
     return 0;
 }
