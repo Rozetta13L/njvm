@@ -24,8 +24,9 @@ int pop()
 
 void listen(unsigned int *programSpeicher)
 {
+    size_t arrayLength = sizeof(programSpeicher) / sizeof(programSpeicher[0]);
     int opcode, immediateWert, instruction, vergleich;
-    for (int i = 0; i <= ARRAYLENGTH(programSpeicher); i++)
+    for (unsigned int i = 0; i <= arrayLength; i++)
     {
         instruction = programSpeicher[programmCounter];
         opcode = instruction >> 24;
@@ -80,7 +81,7 @@ void listen(unsigned int *programSpeicher)
 void ausfuerung(unsigned int *programSpeicher)
 {
     int opcode, immediateWert, instruction, vergleich;
-    for (int i = 0; i <= ARRAYLENGTH(programSpeicher); i++)
+    while (!halt)
     {
         instruction = programSpeicher[programmCounter];
         opcode = instruction >> 24;
@@ -160,49 +161,48 @@ int main(int argc, char *argv[])
         if (strcmp(argv[1], "--prog1") == 0)
         {
             printf("Ninja Virtual Machine started\n");
-            unsigned int *programmSpeicher;
-            programmSpeicher = {
-                pushc 3,
-                pushc 4,
-                add,
-                pushc 10,
-                pushc 6,
-                sub,
-                mul,
-                wrint,
-                pushc 10,
-                wrchr,
-                halt};
+            unsigned int programmSpeicher[] = {
+                (pushc << 24) | IMMEDIATE(3),
+                (pushc << 24) | IMMEDIATE(4),
+                (add << 24),
+                (pushc << 24) | IMMEDIATE(10),
+                (pushc << 24) | IMMEDIATE(6),
+                (sub << 24),
+                (mul << 24),
+                (wrint << 24),
+                (pushc << 24) | IMMEDIATE(10),
+                (wrchr << 24),
+                (halt << 24)};
             listen(programmSpeicher);
             printf("Ninja Virtual Machine stopped\n");
         }
         else if (strcmp(argv[1], "--prog2") == 0)
         {
             printf("Ninja Virtual Machine started\n");
-            unsigned int *programmSpeicher;
+            unsigned int programmSpeicher[];
             programmSpeicher = {
-                pushc - 2,
-                rdint,
-                mul,
-                pushc 3,
-                add,
-                wrint,
-                pushc '\n',
-                wrchr,
-                halt};
+                (pushc << 24) | SIGN_EXTEND(-2),
+                (rdint << 24),
+                (mul << 24),
+                (pushc << 24) | IMMEDIATE(3),
+                (add << 24),
+                (wrint << 24),
+                (pushc << 24) | IMMEDIATE('\n'),
+                (wrchr << 24),
+                (halt << 24)};
             listen(programmSpeicher);
             printf("Ninja Virtual Machine stopped\n");
         }
         else if (strcmp(argv[1], "--prog3") == 0)
         {
             printf("Ninja Virtual Machine started\n");
-            unsigned int *programmSpeicher;
+            unsigned int programmSpeicher[];
             programmSpeicher = {
-                rdchr,
-                wrint,
-                pushc '\n',
-                wrchr,
-                halt};
+                (rdchr << 24),
+                (wrint << 24),
+                (pushc << 24) | IMMEDIATE('\n'),
+                (wrchr << 24),
+                (halt << 24)};
             listen(programmSpeicher);
             printf("Ninja Virtual Machine stopped\n");
         }
