@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 {
     if (argc > 1)
     {
-        for (int i = 2; i < argc; i++)
+        for (int i = 1; i < argc; i++)
         {
             if (strcmp(argv[i], "--help") == 0)
             {
@@ -213,7 +213,7 @@ int main(int argc, char *argv[])
             {
                 printf("Ninja Virtual Machine Version %d (compiled Oct 13 2020, 01:30:23)\n", version);
             }
-            else
+            else if ((strcmp(argv[i], "--prog1") != 0) && (strcmp(argv[i], "--prog2") != 0) && (strcmp(argv[i], "--prog3") != 0))
             {
                 printf("unknown command line argument '%s', try './njvm --help'\n", argv[i]);
                 exit(-1);
@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        printf("Error: no program selected");
+        printf("Error: no program selected\n");
     }
 
     return 0;

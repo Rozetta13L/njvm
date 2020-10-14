@@ -2,36 +2,60 @@
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
-#include "njvm1.h"
+#include "njvm2.h"
 
 int stackPointer, programmCounter = 0;
 unsigned int stack[10000];
-//unsigned int programmSpeicher[20];
+FILE *binFile;
 
-void push(int wert)
+void binFileOffnen(char *file)
 {
-    stack[stackPointer] = wert;
-    stackPointer = stackPointer + 1;
+    binFile = fopen(file, "r");
 }
 
+// Der geoeffnete File schliessen
+void binFileSchliessen()
+{
+    int pruefen;
+    pruefen = fclose(binFile);
+    if (pruefen == 0) // File-Schliessung ist erfoelgt
+    {
+        printf("Ninja Virtual Machine stopped\n");
+    }
+    else
+    {
+        printf("Problem beim File schliessen\n");
+        exit(-1);
+    }
+}
+
+// Wert in dem nachsten freien Platz auf dem Stack speichern
+void push(int wert)
+{
+    stack[stackPointer] = wert;      // Der Wert in dem freien Platz speichern
+    stackPointer = stackPointer + 1; // Stackpointer zeigt auf dem naechsten freien Platz
+}
+
+// Der Wert aus dem Stack nehemen
 int pop()
 {
-    stackPointer = stackPointer - 1;
-    int wert = stack[stackPointer];
-    stack[stackPointer] = 0;
+    stackPointer = stackPointer - 1; // Stackpointer zeigt  auf dem letzt gespeicherten Wert
+    int wert = stack[stackPointer];  // Der Wert nehmen
+    stack[stackPointer] = 0;         // Der Wert zuruecksetzen
     return wert;
 }
 
+// Der Program listen und ausgeben
 void listen(unsigned int programSpeicher[], int arrayLength)
 {
-    programmCounter = 0;
+    programmCounter = 0; // Programcounter auf 0 zuruecksetzen
     unsigned char opcode;
     int immediateWert, instruction;
-    for (unsigned int i = 0; i < arrayLength; i++)
+    for (unsigned int i = 0; i < arrayLength; i++) //bricht ab, wenn alle Instruktionen ausgelistet sind
     {
-        instruction = programSpeicher[programmCounter];
-        opcode = instruction >> 24;
-        immediateWert = SIGN_EXTEND(IMMEDIATE(programSpeicher[programmCounter]));
+        instruction = programSpeicher[programmCounter];                           // Die naechste Instruktion in dem Program lesen
+        opcode = instruction >> 24;                                               // Der Opcode durch rechts schieben Operator kriegen, weil er in dem 8 Oebersten Bits stehet
+        immediateWert = SIGN_EXTEND(IMMEDIATE(programSpeicher[programmCounter])); // Der Wert, der gepusht werden soll. sigh_extend ist benutzt im falle von negativen Zahlen
         if (opcode == halt)
         {
             printf("%03d\t halt\n", programmCounter);
@@ -89,52 +113,53 @@ void listen(unsigned int programSpeicher[], int arrayLength)
     }
 }
 
+// Die Program-Instruktionen ausfuehren und das Ergebnis rechnen
 void ausfuehrung(unsigned int programSpeicher[])
 {
     programmCounter = 0;
     int wert1, wert2;
     unsigned char opcode;
     int immediateWert, instruction;
-    while (1)
-    {
+    while (1) // bricht ab, wenn halt kommt
+    {         // Das Gleiche wie Methode 'listen'
         instruction = programSpeicher[programmCounter];
         opcode = instruction >> 24;
         immediateWert = SIGN_EXTEND(IMMEDIATE(programSpeicher[programmCounter]));
         if (opcode == halt)
         {
-            break;
+            break; // Abbruch-Bedingung
         }
         else if (opcode == pushc)
         {
-            push(immediateWert);
-            programmCounter++;
+            push(immediateWert); // Wert auf dem Stack legen
+            programmCounter++;   // Programcounter erhoehen
         }
         else if (opcode == add)
         {
-            wert2 = pop();
-            wert1 = pop();
-            push(wert1 + wert2);
-            programmCounter++;
+            wert2 = pop();       // letzte gepushte Wert nehmen
+            wert1 = pop();       // vorletzte gepushte Wert nehmen
+            push(wert1 + wert2); // Das Ergebnis pushen
+            programmCounter++;   // Programcounter erhoehen
         }
         else if (opcode == sub)
-        {
+        { // wie add
             wert2 = pop();
             wert1 = pop();
             push(wert1 - wert2);
             programmCounter++;
         }
         else if (opcode == mul)
-        {
+        { // wie add
             wert2 = pop();
             wert1 = pop();
             push(wert1 * wert2);
             programmCounter++;
         }
         else if (opcode == div)
-        {
+        { // wie add
             wert2 = pop();
             wert1 = pop();
-            if (wert2 == 0)
+            if (wert2 == 0) // ueberpruefen ob der Nenner gleich 0, bricht der Program ab
             {
                 printf("können durch 0 nicht teilen !!");
                 exit(-1);
@@ -146,7 +171,7 @@ void ausfuehrung(unsigned int programSpeicher[])
             }
         }
         else if (opcode == mod)
-        {
+        { // wie div
             wert2 = pop();
             wert1 = pop();
             if (wert2 == 0)
@@ -163,20 +188,20 @@ void ausfuehrung(unsigned int programSpeicher[])
         else if (opcode == rdint)
         {
             int input;
-            scanf("%d", &input);
-            push(input);
+            scanf("%d", &input); // Integer von stdin lesen
+            push(input);         // Der Wert pushen
             programmCounter++;
         }
         else if (opcode == wrint)
         {
             wert1 = pop();
-            printf("%d", wert1);
+            printf("%d", wert1); // Wert aus dem Stack nehmen, und auf stdout ausgeben
             programmCounter++;
         }
         else if (opcode == rdchr)
         {
             int input;
-            input = getchar();
+            input = getchar(); // nur erste Character vom was der Benutzer schreibt in input speichern
             push(input);
             programmCounter++;
         }
@@ -184,7 +209,7 @@ void ausfuehrung(unsigned int programSpeicher[])
         {
             char ausgabe;
             wert1 = pop();
-            ausgabe = (char)wert1;
+            ausgabe = (char)wert1; // der Wert zur Datentyp Character wandeln
             printf("%c", ausgabe);
             programmCounter++;
         }
@@ -195,79 +220,47 @@ int main(int argc, char *argv[])
 {
     if (argc > 1)
     {
-        for (int i = 2; i < argc; i++)
+        int abbruch = 1;
+        for (int i = 1; i < argc; i++)
         {
             if (strcmp(argv[i], "--help") == 0)
             {
-                printf("usage: ./njvm [option] [option] ...\n");
-                printf("--prog1          select program 1 to execute\n");
-                printf("--prog2          select program 2 to execute\n");
-                printf("--prog3          select program 3 to execute\n");
-                printf("--version        show version and exit\n");
-                printf("--help           show this help and exit\n");
+                printf("usage: ./njvm [options] <code file>\n");
+                printf(" --version        show version and exit\n");
+                printf(" --help           show this help and exit\n");
+                exit(0);
             }
             else if (strcmp(argv[i], "--version") == 0)
             {
-                printf("Ninja Virtual Machine Version %d (compiled Oct 13 2020, 01:30:23)\n", version);
+                printf("Ninja Virtual Machine Version %d (compiled Oct 14 2020, 22:54:23)\n", version);
+                exit(0);
             }
-            else
+            else if ((strncmp(argv[i], "--", 2) == 0) || (strncmp(argv[i], "--", 1) == 0))
             {
                 printf("unknown command line argument '%s', try './njvm --help'\n", argv[i]);
                 exit(-1);
             }
+
+            if (abbruch >= 2)
+            {
+                break;
+            }
+
+            abbruch++;
         }
-        if (strcmp(argv[1], "--prog1") == 0)
+        if (argc > 2)
         {
-            printf("Ninja Virtual Machine started\n");
-            unsigned int programmSpeicher[] = {
-                (pushc << 24) | IMMEDIATE(3),
-                (pushc << 24) | IMMEDIATE(4),
-                (add << 24),
-                (pushc << 24) | IMMEDIATE(10),
-                (pushc << 24) | IMMEDIATE(6),
-                (sub << 24),
-                (mul << 24),
-                (wrint << 24),
-                (pushc << 24) | IMMEDIATE(10),
-                (wrchr << 24),
-                (halt << 24)};
-            int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]);
-            listen(programmSpeicher, arrayLength);
-            ausfuehrung(programmSpeicher);
-            printf("Ninja Virtual Machine stopped\n");
+            printf("Error: more than one code file specified\n");
         }
-        else if (strcmp(argv[1], "--prog2") == 0)
+        else
         {
-            printf("Ninja Virtual Machine started\n");
-            unsigned int programmSpeicher[] = {
-                (pushc << 24) | IMMEDIATE((-2)),
-                (rdint << 24),
-                (mul << 24),
-                (pushc << 24) | IMMEDIATE(3),
-                (add << 24),
-                (wrint << 24),
-                (pushc << 24) | IMMEDIATE('\n'),
-                (wrchr << 24),
-                (halt << 24)};
-            int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]);
-            listen(programmSpeicher, arrayLength);
-            ausfuehrung(programmSpeicher);
-            printf("Ninja Virtual Machine stopped\n");
+            binFileOffnen(argv[1]);
+            binFileSchliessen();
         }
-        else if (strcmp(argv[1], "--prog3") == 0)
-        {
-            printf("Ninja Virtual Machine started\n");
-            unsigned int programmSpeicher[] = {
-                (rdchr << 24),
-                (wrint << 24),
-                (pushc << 24) | IMMEDIATE('\n'),
-                (wrchr << 24),
-                (halt << 24)};
-            int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]);
-            listen(programmSpeicher, arrayLength);
-            ausfuehrung(programmSpeicher);
-            printf("Ninja Virtual Machine stopped\n");
-        }
+    }
+    else
+    {
+        printf("Error: no code file specified\n");
     }
 
     return 0;
