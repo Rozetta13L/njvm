@@ -6,32 +6,34 @@
 
 int stackPointer, programmCounter = 0;
 unsigned int stack[10000];
-//unsigned int programmSpeicher[20];
 
+// Wert in dem nachsten freien Platz auf dem Stack speichern
 void push(int wert)
 {
-    stack[stackPointer] = wert;
-    stackPointer = stackPointer + 1;
+    stack[stackPointer] = wert;      // Der Wert in dem freien Platz speichern
+    stackPointer = stackPointer + 1; // Stackpointer zeigt auf dem naechsten freien Platz
 }
 
+// Der Wert aus dem Stack nehemen
 int pop()
 {
-    stackPointer = stackPointer - 1;
-    int wert = stack[stackPointer];
-    stack[stackPointer] = 0;
+    stackPointer = stackPointer - 1; // Stackpointer zeigt  auf dem letzt gespeicherten Wert
+    int wert = stack[stackPointer];  // Der Wert nehmen
+    stack[stackPointer] = 0;         // Der Wert zuruecksetzen
     return wert;
 }
 
+// Der Program listen und ausgeben
 void listen(unsigned int programSpeicher[], int arrayLength)
 {
-    programmCounter = 0;
+    programmCounter = 0; // Programcounter auf 0 zuruecksetzen
     unsigned char opcode;
     int immediateWert, instruction;
-    for (unsigned int i = 0; i < arrayLength; i++)
+    for (unsigned int i = 0; i < arrayLength; i++) //bricht ab, wenn alle Instruktionen ausgelistet sind
     {
-        instruction = programSpeicher[programmCounter];
-        opcode = instruction >> 24;
-        immediateWert = SIGN_EXTEND(IMMEDIATE(programSpeicher[programmCounter]));
+        instruction = programSpeicher[programmCounter];                           // Die naechste Instruktion in dem Program lesen
+        opcode = instruction >> 24;                                               // Der Opcode durch rechts schieben Operator kriegen, weil er in dem 8 Oebersten Bits stehet
+        immediateWert = SIGN_EXTEND(IMMEDIATE(programSpeicher[programmCounter])); // Der Wert, der gepusht werden soll. sigh_extend ist benutzt im falle von negativen Zahlen
         if (opcode == halt)
         {
             printf("%03d\t halt\n", programmCounter);
@@ -89,52 +91,53 @@ void listen(unsigned int programSpeicher[], int arrayLength)
     }
 }
 
+// Die Program-Instruktionen ausfuehren und das Ergebnis rechnen
 void ausfuehrung(unsigned int programSpeicher[])
 {
     programmCounter = 0;
     int wert1, wert2;
     unsigned char opcode;
     int immediateWert, instruction;
-    while (1)
-    {
+    while (1) // bricht ab, wenn halt kommt
+    {         // Das Gleiche wie Methode 'listen'
         instruction = programSpeicher[programmCounter];
         opcode = instruction >> 24;
         immediateWert = SIGN_EXTEND(IMMEDIATE(programSpeicher[programmCounter]));
         if (opcode == halt)
         {
-            break;
+            break; // Abbruch-Bedingung
         }
         else if (opcode == pushc)
         {
-            push(immediateWert);
-            programmCounter++;
+            push(immediateWert); // Wert auf dem Stack legen
+            programmCounter++;   // Programcounter erhoehen
         }
         else if (opcode == add)
         {
-            wert2 = pop();
-            wert1 = pop();
-            push(wert1 + wert2);
-            programmCounter++;
+            wert2 = pop();       // letzte gepushte Wert nehmen
+            wert1 = pop();       // vorletzte gepushte Wert nehmen
+            push(wert1 + wert2); // Das Ergebnis pushen
+            programmCounter++;   // Programcounter erhoehen
         }
         else if (opcode == sub)
-        {
+        { // wie add
             wert2 = pop();
             wert1 = pop();
             push(wert1 - wert2);
             programmCounter++;
         }
         else if (opcode == mul)
-        {
+        { // wie add
             wert2 = pop();
             wert1 = pop();
             push(wert1 * wert2);
             programmCounter++;
         }
         else if (opcode == div)
-        {
+        { // wie add
             wert2 = pop();
             wert1 = pop();
-            if (wert2 == 0)
+            if (wert2 == 0) // ueberpruefen ob der Nenner gleich 0, bricht der Program ab
             {
                 printf("können durch 0 nicht teilen !!");
                 exit(-1);
@@ -146,7 +149,7 @@ void ausfuehrung(unsigned int programSpeicher[])
             }
         }
         else if (opcode == mod)
-        {
+        { // wie div
             wert2 = pop();
             wert1 = pop();
             if (wert2 == 0)
@@ -163,20 +166,20 @@ void ausfuehrung(unsigned int programSpeicher[])
         else if (opcode == rdint)
         {
             int input;
-            scanf("%d", &input);
-            push(input);
+            scanf("%d", &input); // Integer von stdin lesen
+            push(input);         // Der Wert pushen
             programmCounter++;
         }
         else if (opcode == wrint)
         {
             wert1 = pop();
-            printf("%d", wert1);
+            printf("%d", wert1); // Wert aus dem Stack nehmen, und auf stdout ausgeben
             programmCounter++;
         }
         else if (opcode == rdchr)
         {
             int input;
-            input = getchar();
+            input = getchar(); // nur erste Character vom was der Benutzer schreibt in input speichern
             push(input);
             programmCounter++;
         }
@@ -184,7 +187,7 @@ void ausfuehrung(unsigned int programSpeicher[])
         {
             char ausgabe;
             wert1 = pop();
-            ausgabe = (char)wert1;
+            ausgabe = (char)wert1; // der Wert zur Datentyp Character wandeln
             printf("%c", ausgabe);
             programmCounter++;
         }
@@ -231,7 +234,7 @@ int main(int argc, char *argv[])
                 (pushc << 24) | IMMEDIATE(10),
                 (wrchr << 24),
                 (halt << 24)};
-            int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]);
+            int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]); // Instruktionenzahl rechnen
             listen(programmSpeicher, arrayLength);
             ausfuehrung(programmSpeicher);
             printf("Ninja Virtual Machine stopped\n");
@@ -249,7 +252,7 @@ int main(int argc, char *argv[])
                 (pushc << 24) | IMMEDIATE('\n'),
                 (wrchr << 24),
                 (halt << 24)};
-            int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]);
+            int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]); // Instruktionenzahl rechnen
             listen(programmSpeicher, arrayLength);
             ausfuehrung(programmSpeicher);
             printf("Ninja Virtual Machine stopped\n");
@@ -263,7 +266,7 @@ int main(int argc, char *argv[])
                 (pushc << 24) | IMMEDIATE('\n'),
                 (wrchr << 24),
                 (halt << 24)};
-            int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]);
+            int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]); // Instruktionenzahl rechnen
             listen(programmSpeicher, arrayLength);
             ausfuehrung(programmSpeicher);
             printf("Ninja Virtual Machine stopped\n");
