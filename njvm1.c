@@ -7,7 +7,7 @@
 void push(int wert);
 int pop();
 void listen(unsigned int programSpeicher[], int arrayLength);
-void ausfeuhrungn(unsigned int programSpeicher[]);
+void ausfuehrung(unsigned int programSpeicher[]);
 int stackPointer, programmCounter = 0;
 unsigned int stack[10000];
 //unsigned int programmSpeicher[20];
@@ -28,6 +28,7 @@ int pop()
 
 void listen(unsigned int programSpeicher[], int arrayLength)
 {
+    programmCounter = 0;
     unsigned char opcode;
     int immediateWert, instruction;
     for (unsigned int i = 0; i < arrayLength; i++)
@@ -94,10 +95,11 @@ void listen(unsigned int programSpeicher[], int arrayLength)
 
 void ausfuehrung(unsigned int programSpeicher[])
 {
+    programmCounter = 0;
     int wert1, wert2;
     unsigned char opcode;
     int immediateWert, instruction;
-    while (!halt)
+    while (1)
     {
         instruction = programSpeicher[programmCounter];
         opcode = instruction >> 24;
@@ -109,24 +111,28 @@ void ausfuehrung(unsigned int programSpeicher[])
         else if (opcode == pushc)
         {
             push(immediateWert);
+            programmCounter++;
         }
         else if (opcode == add)
         {
             wert2 = pop();
             wert1 = pop();
             push(wert1 + wert2);
+            programmCounter++;
         }
         else if (opcode == sub)
         {
             wert2 = pop();
             wert1 = pop();
             push(wert1 - wert2);
+            programmCounter++;
         }
         else if (opcode == mul)
         {
             wert2 = pop();
             wert1 = pop();
             push(wert1 * wert2);
+            programmCounter++;
         }
         else if (opcode == div)
         {
@@ -140,6 +146,7 @@ void ausfuehrung(unsigned int programSpeicher[])
             else
             {
                 push(wert1 / wert2);
+                programmCounter++;
             }
         }
         else if (opcode == mod)
@@ -154,29 +161,36 @@ void ausfuehrung(unsigned int programSpeicher[])
             else
             {
                 push(wert1 % wert2);
+                programmCounter++;
             }
         }
         else if (opcode == rdint)
         {
             int input;
-            scanf("%s", &input);
+            scanf("%d", &input);
+            push(input);
+            programmCounter++;
         }
         else if (opcode == wrint)
         {
             wert1 = pop();
-            printf("%d\n", wert1);
+            printf("%d", wert1);
+            programmCounter++;
         }
         else if (opcode == rdchr)
         {
             int input;
             input = getchar();
+            push(input);
+            programmCounter++;
         }
         else if (opcode == wrchr)
         {
             char ausgabe;
             wert1 = pop();
             ausgabe = (char)wert1;
-            printf("%c\n", ausgabe);
+            printf("%c", ausgabe);
+            programmCounter++;
         }
     }
 }
@@ -223,6 +237,7 @@ int main(int argc, char *argv[])
                 (halt << 24)};
             int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]);
             listen(programmSpeicher, arrayLength);
+            ausfuehrung(programmSpeicher);
             printf("Ninja Virtual Machine stopped\n");
         }
         else if (strcmp(argv[1], "--prog2") == 0)
@@ -240,6 +255,7 @@ int main(int argc, char *argv[])
                 (halt << 24)};
             int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]);
             listen(programmSpeicher, arrayLength);
+            ausfuehrung(programmSpeicher);
             printf("Ninja Virtual Machine stopped\n");
         }
         else if (strcmp(argv[1], "--prog3") == 0)
@@ -253,6 +269,7 @@ int main(int argc, char *argv[])
                 (halt << 24)};
             int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]);
             listen(programmSpeicher, arrayLength);
+            ausfuehrung(programmSpeicher);
             printf("Ninja Virtual Machine stopped\n");
         }
     }
