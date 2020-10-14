@@ -6,7 +6,7 @@
 
 int stackPointer, programmCounter = 0;
 unsigned int stack[10000];
-unsigned int programmSpeicher[20];
+//unsigned int programmSpeicher[20];
 
 void push(int wert)
 {
@@ -22,15 +22,18 @@ int pop()
     return wert;
 }
 
-void listen(unsigned int *programmSpeicher)
+void listen(unsigned int *programSpeicher)
 {
-    programmSpeicher[programmCounter];
+    int opcode, immediateWert, instruction;
+    for (int i = 0; i <= ARRAYLENGTH(programSpeicher); i++)
+    {
+        instruction = programSpeicher[programmCounter];
+        opcode = instruction >> 24;
+    }
 }
 
 int main(int argc, char *argv[])
 {
-    time_t t;
-    time(&t);
     if (argc > 1)
     {
         for (int i = 2; i < argc; i++)
@@ -46,7 +49,7 @@ int main(int argc, char *argv[])
             }
             else if (strcmp(argv[i], "--version") == 0)
             {
-                printf("Ninja Virtual Machine Version %d, Compiled %s\n", version, ctime(&t));
+                printf("Ninja Virtual Machine Version %d (compiled Oct 13 2020, 01:30:23)\n", version);
             }
             else
             {
