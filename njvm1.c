@@ -6,7 +6,7 @@
 
 void push(int wert);
 int pop();
-void listen(unsigned int programSpeicher[]);
+void listen(unsigned int programSpeicher[], int arrayLength);
 void ausfeuhrungn(unsigned int programSpeicher[]);
 int stackPointer, programmCounter = 0;
 unsigned int stack[10000];
@@ -26,10 +26,10 @@ int pop()
     return wert;
 }
 
-void listen(unsigned int programSpeicher[])
+void listen(unsigned int programSpeicher[], int arrayLength)
 {
     int opcode, immediateWert, instruction;
-    for (unsigned int i = 0; i <= (sizeof(programSpeicher) / sizeof(programSpeicher[0])); i++)
+    for (unsigned int i = 0; i < arrayLength; i++)
     {
         instruction = programSpeicher[programmCounter];
         opcode = instruction >> 24;
@@ -186,7 +186,8 @@ int main(int argc, char *argv[])
                 (pushc << 24) | IMMEDIATE(10),
                 (wrchr << 24),
                 (halt << 24)};
-            listen(programmSpeicher);
+            int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]);
+            listen(programmSpeicher, arrayLength);
             printf("Ninja Virtual Machine stopped\n");
         }
         else if (strcmp(argv[1], "--prog2") == 0)
@@ -202,7 +203,8 @@ int main(int argc, char *argv[])
                 (pushc << 24) | IMMEDIATE('\n'),
                 (wrchr << 24),
                 (halt << 24)};
-            listen(programmSpeicher);
+            int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]);
+            listen(programmSpeicher, arrayLength);
             printf("Ninja Virtual Machine stopped\n");
         }
         else if (strcmp(argv[1], "--prog3") == 0)
@@ -214,7 +216,8 @@ int main(int argc, char *argv[])
                 (pushc << 24) | IMMEDIATE('\n'),
                 (wrchr << 24),
                 (halt << 24)};
-            listen(programmSpeicher);
+            int arrayLength = sizeof(programmSpeicher) / sizeof(programmSpeicher[0]);
+            listen(programmSpeicher, arrayLength);
             printf("Ninja Virtual Machine stopped\n");
         }
     }
