@@ -28,7 +28,8 @@ int pop()
 
 void listen(unsigned int programSpeicher[], int arrayLength)
 {
-    int opcode, immediateWert, instruction;
+    unsigned char opcode;
+    int immediateWert, instruction;
     for (unsigned int i = 0; i < arrayLength; i++)
     {
         instruction = programSpeicher[programmCounter];
@@ -93,55 +94,89 @@ void listen(unsigned int programSpeicher[], int arrayLength)
 
 void ausfuehrung(unsigned int programSpeicher[])
 {
-    int opcode, immediateWert, instruction;
+    int wert1, wert2;
+    unsigned char opcode;
+    int immediateWert, instruction;
     while (!halt)
     {
         instruction = programSpeicher[programmCounter];
         opcode = instruction >> 24;
-        immediateWert = IMMEDIATE(programSpeicher[programmCounter]);
+        immediateWert = SIGN_EXTEND(IMMEDIATE(programSpeicher[programmCounter]));
         if (opcode == halt)
         {
-            printf("%03d\t halt\n", programmCounter);
+            break;
         }
         else if (opcode == pushc)
         {
-            printf("%03d\t pushc\t %d\n", programmCounter, immediateWert);
+            push(immediateWert);
         }
         else if (opcode == add)
         {
-            printf("%03d\t add\n", programmCounter);
+            wert2 = pop();
+            wert1 = pop();
+            push(wert1 + wert2);
         }
         else if (opcode == sub)
         {
-            printf("%03d\t sub\n", programmCounter);
+            wert2 = pop();
+            wert1 = pop();
+            push(wert1 - wert2);
         }
         else if (opcode == mul)
         {
-            printf("%03d\t mul\n", programmCounter);
+            wert2 = pop();
+            wert1 = pop();
+            push(wert1 * wert2);
         }
         else if (opcode == div)
         {
-            printf("%03d\t div\n", programmCounter);
+            wert2 = pop();
+            wert1 = pop();
+            if (wert2 == 0)
+            {
+                printf("können durch 0 nicht teilen !!");
+                exit(-1);
+            }
+            else
+            {
+                push(wert1 / wert2);
+            }
         }
         else if (opcode == mod)
         {
-            printf("%03d\t mod\n", programmCounter);
+            wert2 = pop();
+            wert1 = pop();
+            if (wert2 == 0)
+            {
+                printf("können durch 0 nicht teilen !!");
+                exit(-1);
+            }
+            else
+            {
+                push(wert1 % wert2);
+            }
         }
         else if (opcode == rdint)
         {
-            printf("%03d\t rdint\n", programmCounter);
+            int input;
+            scanf("%s", &input);
         }
         else if (opcode == wrint)
         {
-            printf("%03d\t wrint\n", programmCounter);
+            wert1 = pop();
+            printf("%d\n", wert1);
         }
         else if (opcode == rdchr)
         {
-            printf("%03d\t rdchr\n", programmCounter);
+            int input;
+            input = getchar();
         }
         else if (opcode == wrchr)
         {
-            printf("%03d\t wrchr\n", programmCounter);
+            char ausgabe;
+            wert1 = pop();
+            ausgabe = (char)wert1;
+            printf("%c\n", ausgabe);
         }
     }
 }
@@ -194,7 +229,7 @@ int main(int argc, char *argv[])
         {
             printf("Ninja Virtual Machine started\n");
             unsigned int programmSpeicher[] = {
-                (pushc << 24) | IMMEDIATE(SIGN_EXTEND(-2)),
+                (pushc << 24) | IMMEDIATE((-2)),
                 (rdint << 24),
                 (mul << 24),
                 (pushc << 24) | IMMEDIATE(3),
