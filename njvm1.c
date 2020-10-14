@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include "njvm1.h"
 
+void push(int wert);
+int pop();
+void listen(unsigned int programSpeicher[]);
+void ausfeuhrungn(unsigned int programSpeicher[]);
 int stackPointer, programmCounter = 0;
 unsigned int stack[10000];
 //unsigned int programmSpeicher[20];
@@ -22,113 +26,122 @@ int pop()
     return wert;
 }
 
-void listen(unsigned int *programSpeicher)
+void listen(unsigned int programSpeicher[])
 {
-    size_t arrayLength = sizeof(programSpeicher) / sizeof(programSpeicher[0]);
-    int opcode, immediateWert, instruction, vergleich;
-    for (unsigned int i = 0; i <= arrayLength; i++)
+    int opcode, immediateWert, instruction;
+    for (unsigned int i = 0; i <= (sizeof(programSpeicher) / sizeof(programSpeicher[0])); i++)
     {
         instruction = programSpeicher[programmCounter];
         opcode = instruction >> 24;
         immediateWert = IMMEDIATE(programSpeicher[programmCounter]);
-        if (vergleich == halt)
+        if (opcode == halt)
         {
-            printf("%03d\t halt\n", opcode);
+            printf("%03d\t halt\n", programmCounter);
         }
-        else if (vergleich == pushc)
+        else if (opcode == pushc)
         {
-            printf("%03d\t pushc\t %d\n", opcode, immediateWert);
+            printf("%03d\t pushc\t %d\n", programmCounter, immediateWert);
+            programmCounter++;
         }
-        else if (vergleich == add)
+        else if (opcode == add)
         {
-            printf("%03d\t add\n", opcode);
+            printf("%03d\t add\n", programmCounter);
+            programmCounter++;
         }
-        else if (vergleich == sub)
+        else if (opcode == sub)
         {
-            printf("%03d\t sub\n", opcode);
+            printf("%03d\t sub\n", programmCounter);
+            programmCounter++;
         }
-        else if (vergleich == mul)
+        else if (opcode == mul)
         {
-            printf("%03d\t mul\n", opcode);
+            printf("%03d\t mul\n", programmCounter);
+            programmCounter++;
         }
-        else if (vergleich == div)
+        else if (opcode == div)
         {
-            printf("%03d\t div\n", opcode);
+            printf("%03d\t div\n", programmCounter);
+            programmCounter++;
         }
-        else if (vergleich == mod)
+        else if (opcode == mod)
         {
-            printf("%03d\t mod\n", opcode);
+            printf("%03d\t mod\n", programmCounter);
+            programmCounter++;
         }
-        else if (vergleich == rdint)
+        else if (opcode == rdint)
         {
-            printf("%03d\t rdint\n", opcode);
+            printf("%03d\t rdint\n", programmCounter);
+            programmCounter++;
         }
-        else if (vergleich == wrint)
+        else if (opcode == wrint)
         {
-            printf("%03d\t wrint\n", opcode);
+            printf("%03d\t wrint\n", programmCounter);
+            programmCounter++;
         }
-        else if (vergleich == rdchr)
+        else if (opcode == rdchr)
         {
-            printf("%03d\t rdchr\n", opcode);
+            printf("%03d\t rdchr\n", programmCounter);
+            programmCounter++;
         }
-        else if (vergleich == wrchr)
+        else if (opcode == wrchr)
         {
-            printf("%03d\t wrchr\n", opcode);
+            printf("%03d\t wrchr\n", programmCounter);
+            programmCounter++;
         }
     }
 }
 
-void ausfuerung(unsigned int *programSpeicher)
+void ausfuehrung(unsigned int programSpeicher[])
 {
-    int opcode, immediateWert, instruction, vergleich;
+    int opcode, immediateWert, instruction;
     while (!halt)
     {
         instruction = programSpeicher[programmCounter];
         opcode = instruction >> 24;
         immediateWert = IMMEDIATE(programSpeicher[programmCounter]);
-        if (vergleich == halt)
+        if (opcode == halt)
         {
-            printf("%03d\t halt\n", opcode);
+            printf("%03d\t halt\n", programmCounter);
         }
-        else if (vergleich == pushc)
+        else if (opcode == pushc)
         {
-            printf("%03d\t pushc\t %d\n", opcode, immediateWert);
+            printf("%03d\t pushc\t %d\n", programmCounter, immediateWert);
         }
-        else if (vergleich == add)
+        else if (opcode == add)
         {
-            printf("%03d\t add\n", opcode);
+            printf("%03d\t add\n", programmCounter);
         }
-        else if (vergleich == sub)
+        else if (opcode == sub)
         {
-            printf("%03d\t sub\n", opcode);
+            printf("%03d\t sub\n", programmCounter);
         }
-        else if (vergleich == mul)
+        else if (opcode == mul)
         {
-            printf("%03d\t mul\n", opcode);
+            printf("%03d\t mul\n", programmCounter);
         }
-        else if (vergleich == div)
+        else if (opcode == div)
         {
-            printf("%03d\t div\n", opcode);
+            printf("%03d\t div\n", programmCounter);
         }
-        else if (vergleich == mod)
+        else if (opcode == mod)
         {
-            printf("%03d\t mod\n", opcode);
+            printf("%03d\t mod\n", programmCounter);
         }
-        else if (vergleich == rdint)
+        else if (opcode == rdint)
         {
-            printf("%03d\t rdint\n", opcode);
+            printf("%03d\t rdint\n", programmCounter);
         }
-        else if (vergleich == wrint)
+        else if (opcode == wrint)
         {
-            printf("%03d\t wrint\n", opcode);
+            printf("%03d\t wrint\n", programmCounter);
         }
-        else if (vergleich == rdchr)
+        else if (opcode == rdchr)
         {
-            printf("%03d\t rdchr\n", opcode);
+            printf("%03d\t rdchr\n", programmCounter);
         }
-        else if (vergleich == wrchr)
+        else if (opcode == wrchr)
         {
-            printf("%03d\t wrchr\n", opcode);
+            printf("%03d\t wrchr\n", programmCounter);
         }
     }
 }
@@ -179,8 +192,7 @@ int main(int argc, char *argv[])
         else if (strcmp(argv[1], "--prog2") == 0)
         {
             printf("Ninja Virtual Machine started\n");
-            unsigned int programmSpeicher[];
-            programmSpeicher = {
+            unsigned int programmSpeicher[] = {
                 (pushc << 24) | SIGN_EXTEND(-2),
                 (rdint << 24),
                 (mul << 24),
@@ -196,8 +208,7 @@ int main(int argc, char *argv[])
         else if (strcmp(argv[1], "--prog3") == 0)
         {
             printf("Ninja Virtual Machine started\n");
-            unsigned int programmSpeicher[];
-            programmSpeicher = {
+            unsigned int programmSpeicher[] = {
                 (rdchr << 24),
                 (wrint << 24),
                 (pushc << 24) | IMMEDIATE('\n'),
