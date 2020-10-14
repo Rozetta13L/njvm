@@ -4,10 +4,6 @@
 #include <stdlib.h>
 #include "njvm1.h"
 
-void push(int wert);
-int pop();
-void listen(unsigned int programSpeicher[], int arrayLength);
-void ausfuehrung(unsigned int programSpeicher[]);
 int stackPointer, programmCounter = 0;
 unsigned int stack[10000];
 //unsigned int programmSpeicher[20];
