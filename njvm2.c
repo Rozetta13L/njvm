@@ -4,18 +4,57 @@
 #include <stdlib.h>
 #include "njvm2.h"
 
-int stackPointer, programmCounter = 0;
-unsigned int stack[10000];
+unsigned int globalVarZahl, instrZahl;
+int framePointer, stackPointer, programmCounter = 0;
+unsigned int stack[STACKSIZE];
 FILE *binFile;
+unsigned int *staticDataArea;
+unsigned int *programmSpeicher;
 
 void binFileOffnen(char *file)
 {
+    char formatIdentifier[4];
+    unsigned int versionCheck;
     binFile = fopen(file, "r");
+    if (binFile == NULL)
+    {
+        printf("Error: cannot open code file '%s'", file);
+        exit(-1);
+    }
+    fread(formatIdentifier, sizeof(int), 4, binFile);
+    if (strncmp(formatIdentifier, "NJVM", 4) != 0)
+    {
+        printf("Die Format-Identifier ist nicht 'NJVM' !!\n");
+        exit(-1);
+    }
+    fread(&versionCheck, 1, sizeof(int), binFile);
+    if (versionCheck != version)
+    {
+        printf("Program-Version ist nicht das gleiche Version wie die VM !!\n");
+        exit(-1);
+    }
+    fread(&instrZahl, 1, sizeof(int), binFile);
+    programmSpeicher = malloc(instrZahl);
+    if (programmSpeicher == NULL)
+    {
+        printf("Problem beim Speicher allocating !!!\n");
+        exit(-1);
+    }
+    fread(&globalVarZahl, 1, sizeof(int), binFile);
+    staticDataArea = malloc(globalVarZahl);
+    if (staticDataArea == NULL)
+    {
+        printf("Problem beim SDA-Speicher allocating !!!\n");
+        exit(-1);
+    }
+    fread(programmSpeicher, instrZahl, sizeof(int), binFile);
 }
 
 // Der geoeffnete File schliessen
 void binFileSchliessen()
 {
+    free(programmSpeicher);
+    free(staticDataArea);
     int pruefen;
     pruefen = fclose(binFile);
     if (pruefen == 0) // File-Schliessung ist erfoelgt
@@ -32,17 +71,33 @@ void binFileSchliessen()
 // Wert in dem nachsten freien Platz auf dem Stack speichern
 void push(int wert)
 {
-    stack[stackPointer] = wert;      // Der Wert in dem freien Platz speichern
-    stackPointer = stackPointer + 1; // Stackpointer zeigt auf dem naechsten freien Platz
+    if (stackPointer > STACKSIZE)
+    {
+        printf("STACKUEBERLAUF !!!\n");
+        exit(-1);
+    }
+    else
+    {
+        stack[stackPointer] = wert;      // Der Wert in dem freien Platz speichern
+        stackPointer = stackPointer + 1; // Stackpointer zeigt auf dem naechsten freien Platz
+    }
 }
 
 // Der Wert aus dem Stack nehemen
 int pop()
 {
-    stackPointer = stackPointer - 1; // Stackpointer zeigt  auf dem letzt gespeicherten Wert
-    int wert = stack[stackPointer];  // Der Wert nehmen
-    stack[stackPointer] = 0;         // Der Wert zuruecksetzen
-    return wert;
+    if (stackPointer < 0)
+    {
+        printf("STACKUNTERLAUF !!!\n");
+        exit(-1);
+    }
+    else
+    {
+        stackPointer = stackPointer - 1; // Stackpointer zeigt  auf dem letzt gespeicherten Wert
+        int wert = stack[stackPointer];  // Der Wert nehmen
+        stack[stackPointer] = 0;         // Der Wert zuruecksetzen
+        return wert;
+    }
 }
 
 // Der Program listen und ausgeben
@@ -108,6 +163,36 @@ void listen(unsigned int programSpeicher[], int arrayLength)
         else if (opcode == wrchr)
         {
             printf("%03d\t wrchr\n", programmCounter);
+            programmCounter++;
+        }
+        else if (opcode == pushg)
+        {
+            printf("%03d\t pushg\t %d\n", programmCounter, immediateWert);
+            programmCounter++;
+        }
+        else if (opcode == popg)
+        {
+            printf("%03d\t popg\t %d\n", programmCounter, immediateWert);
+            programmCounter++;
+        }
+        else if (opcode == asf)
+        {
+            printf("%03d\t asf\n", programmCounter);
+            programmCounter++;
+        }
+        else if (opcode == rsf)
+        {
+            printf("%03d\t rsf\n", programmCounter);
+            programmCounter++;
+        }
+        else if (opcode == pushl)
+        {
+            printf("%03d\t pushl\t %d\n", programmCounter, immediateWert);
+            programmCounter++;
+        }
+        else if (opcode == popl)
+        {
+            printf("%03d\t popl\t %d\n", programmCounter, immediateWert);
             programmCounter++;
         }
     }
@@ -213,9 +298,42 @@ void ausfuehrung(unsigned int programSpeicher[])
             printf("%c", ausgabe);
             programmCounter++;
         }
+        else if (opcode == pushg)
+        {
+            printf("%03d\t pushg\t %d\n", programmCounter, immediateWert);
+            programmCounter++;
+        }
+        else if (opcode == popg)
+        {
+            printf("%03d\t popg\t %d\n", programmCounter, immediateWert);
+            programmCounter++;
+        }
+        else if (opcode == asf)
+        {
+            framePointer = stackPointer;
+            stackPointer = stackPointer + immediateWert;
+            programmCounter++;
+        }
+        else if (opcode == rsf)
+        {
+            stackPointer = framePointer;
+            framePointer = pop();
+            programmCounter++;
+        }
+        else if (opcode == pushl)
+        {
+            printf("%03d\t pushl\t %d\n", programmCounter, immediateWert);
+            programmCounter++;
+        }
+        else if (opcode == popl)
+        {
+            printf("%03d\t popl\t %d\n", programmCounter, immediateWert);
+            programmCounter++;
+        }
     }
 }
 
+// Main-Methode
 int main(int argc, char *argv[])
 {
     if (argc > 1)
