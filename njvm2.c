@@ -48,6 +48,7 @@ void binFileOffnen(char *file)
         exit(-1);
     }
     fread(programmSpeicher, instrZahl, sizeof(int), binFile);
+    framePointer, stackPointer, programmCounter = 0;
 }
 
 // Der geoeffnete File schliessen
@@ -101,12 +102,12 @@ int pop()
 }
 
 // Der Program listen und ausgeben
-void listen(unsigned int programSpeicher[], int arrayLength)
+void listen(unsigned int programSpeicher[])
 {
     programmCounter = 0; // Programcounter auf 0 zuruecksetzen
     unsigned char opcode;
     int immediateWert, instruction;
-    for (unsigned int i = 0; i < arrayLength; i++) //bricht ab, wenn alle Instruktionen ausgelistet sind
+    for (unsigned int i = 0; i < instrZahl; i++) //bricht ab, wenn alle Instruktionen ausgelistet sind
     {
         instruction = programSpeicher[programmCounter];                           // Die naechste Instruktion in dem Program lesen
         opcode = instruction >> 24;                                               // Der Opcode durch rechts schieben Operator kriegen, weil er in dem 8 Oebersten Bits stehet
