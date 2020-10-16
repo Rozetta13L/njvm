@@ -21,8 +21,8 @@ void binFileOffnen(char *file)
         printf("Error: cannot open code file '%s'", file);
         exit(-1);
     }
-    fread(formatIdentifier, sizeof(int), 4, binFile);
-    if (strncmp(formatIdentifier, "NJVM", 4) != 0)
+    fread(formatIdentifier, sizeof(char), 4, binFile);
+    if (strncmp(formatIdentifier, "NJBF", 4) != 0)
     {
         printf("Die Format-Identifier ist nicht 'NJVM' !!\n");
         exit(-1);
@@ -34,28 +34,28 @@ void binFileOffnen(char *file)
         exit(-1);
     }
     fread(&instrZahl, 1, sizeof(int), binFile);
-    programmSpeicher = malloc(instrZahl);
+    programmSpeicher = malloc(instrZahl * 4);
     if (programmSpeicher == NULL)
     {
         printf("Problem beim Speicher allocating !!!\n");
         exit(-1);
     }
     fread(&globalVarZahl, 1, sizeof(int), binFile);
-    staticDataArea = malloc(globalVarZahl);
+    staticDataArea = malloc(globalVarZahl * 4);
     if (staticDataArea == NULL)
     {
         printf("Problem beim SDA-Speicher allocating !!!\n");
         exit(-1);
     }
     fread(programmSpeicher, instrZahl, sizeof(int), binFile);
-    framePointer, stackPointer, programmCounter = 0;
+    framePointer = 0;
+    stackPointer = 0;
+    programmCounter = 0;
 }
 
 // Der geoeffnete File schliessen
 void binFileSchliessen()
 {
-    free(programmSpeicher);
-    free(staticDataArea);
     int pruefen;
     pruefen = fclose(binFile);
     if (pruefen == 0) // File-Schliessung ist erfoelgt
@@ -119,83 +119,68 @@ void listen(unsigned int programSpeicher[])
         else if (opcode == pushc)
         {
             printf("%03d\t pushc\t %d\n", programmCounter, immediateWert);
-            programmCounter++;
         }
         else if (opcode == add)
         {
             printf("%03d\t add\n", programmCounter);
-            programmCounter++;
         }
         else if (opcode == sub)
         {
             printf("%03d\t sub\n", programmCounter);
-            programmCounter++;
         }
         else if (opcode == mul)
         {
             printf("%03d\t mul\n", programmCounter);
-            programmCounter++;
         }
         else if (opcode == div)
         {
             printf("%03d\t div\n", programmCounter);
-            programmCounter++;
         }
         else if (opcode == mod)
         {
             printf("%03d\t mod\n", programmCounter);
-            programmCounter++;
         }
         else if (opcode == rdint)
         {
             printf("%03d\t rdint\n", programmCounter);
-            programmCounter++;
         }
         else if (opcode == wrint)
         {
             printf("%03d\t wrint\n", programmCounter);
-            programmCounter++;
         }
         else if (opcode == rdchr)
         {
             printf("%03d\t rdchr\n", programmCounter);
-            programmCounter++;
         }
         else if (opcode == wrchr)
         {
             printf("%03d\t wrchr\n", programmCounter);
-            programmCounter++;
         }
         else if (opcode == pushg)
         {
             printf("%03d\t pushg\t %d\n", programmCounter, immediateWert);
-            programmCounter++;
         }
         else if (opcode == popg)
         {
             printf("%03d\t popg\t %d\n", programmCounter, immediateWert);
-            programmCounter++;
         }
         else if (opcode == asf)
         {
-            printf("%03d\t asf\n", programmCounter);
-            programmCounter++;
+            printf("%03d\t asf\t %d\n", programmCounter, immediateWert);
         }
         else if (opcode == rsf)
         {
             printf("%03d\t rsf\n", programmCounter);
-            programmCounter++;
         }
         else if (opcode == pushl)
         {
             printf("%03d\t pushl\t %d\n", programmCounter, immediateWert);
-            programmCounter++;
         }
         else if (opcode == popl)
         {
             printf("%03d\t popl\t %d\n", programmCounter, immediateWert);
-            programmCounter++;
         }
+        programmCounter++;
     }
 }
 
@@ -218,28 +203,24 @@ void ausfuehrung(unsigned int programSpeicher[])
         else if (opcode == pushc)
         {
             push(immediateWert); // Wert auf dem Stack legen
-            programmCounter++;   // Programcounter erhoehen
         }
         else if (opcode == add)
         {
             wert2 = pop();       // letzte gepushte Wert nehmen
             wert1 = pop();       // vorletzte gepushte Wert nehmen
             push(wert1 + wert2); // Das Ergebnis pushen
-            programmCounter++;   // Programcounter erhoehen
         }
         else if (opcode == sub)
         { // wie add
             wert2 = pop();
             wert1 = pop();
             push(wert1 - wert2);
-            programmCounter++;
         }
         else if (opcode == mul)
         { // wie add
             wert2 = pop();
             wert1 = pop();
             push(wert1 * wert2);
-            programmCounter++;
         }
         else if (opcode == div)
         { // wie add
@@ -253,7 +234,6 @@ void ausfuehrung(unsigned int programSpeicher[])
             else
             {
                 push(wert1 / wert2);
-                programmCounter++;
             }
         }
         else if (opcode == mod)
@@ -268,7 +248,6 @@ void ausfuehrung(unsigned int programSpeicher[])
             else
             {
                 push(wert1 % wert2);
-                programmCounter++;
             }
         }
         else if (opcode == rdint)
@@ -276,20 +255,17 @@ void ausfuehrung(unsigned int programSpeicher[])
             int input;
             scanf("%d", &input); // Integer von stdin lesen
             push(input);         // Der Wert pushen
-            programmCounter++;
         }
         else if (opcode == wrint)
         {
             wert1 = pop();
             printf("%d", wert1); // Wert aus dem Stack nehmen, und auf stdout ausgeben
-            programmCounter++;
         }
         else if (opcode == rdchr)
         {
             int input;
             input = getchar(); // nur erste Character vom was der Benutzer schreibt in input speichern
             push(input);
-            programmCounter++;
         }
         else if (opcode == wrchr)
         {
@@ -297,40 +273,42 @@ void ausfuehrung(unsigned int programSpeicher[])
             wert1 = pop();
             ausgabe = (char)wert1; // der Wert zur Datentyp Character wandeln
             printf("%c", ausgabe);
-            programmCounter++;
         }
         else if (opcode == pushg)
         {
-            printf("%03d\t pushg\t %d\n", programmCounter, immediateWert);
-            programmCounter++;
+            wert1 = staticDataArea[immediateWert];
+            push(wert1);
         }
         else if (opcode == popg)
         {
-            printf("%03d\t popg\t %d\n", programmCounter, immediateWert);
-            programmCounter++;
+            wert1 = pop();
+            staticDataArea[immediateWert] = wert1;
         }
         else if (opcode == asf)
         {
             framePointer = stackPointer;
             stackPointer = stackPointer + immediateWert;
-            programmCounter++;
         }
         else if (opcode == rsf)
         {
             stackPointer = framePointer;
             framePointer = pop();
-            programmCounter++;
         }
         else if (opcode == pushl)
         {
-            printf("%03d\t pushl\t %d\n", programmCounter, immediateWert);
-            programmCounter++;
+            int gewunPos;
+            gewunPos = framePointer + immediateWert;
+            wert1 = stack[gewunPos];
+            push(wert1);
         }
         else if (opcode == popl)
         {
-            printf("%03d\t popl\t %d\n", programmCounter, immediateWert);
-            programmCounter++;
+            int gewunPos;
+            gewunPos = framePointer + immediateWert;
+            wert1 = pop();
+            stack[gewunPos] = wert1;
         }
+        programmCounter++;
     }
 }
 
@@ -374,6 +352,9 @@ int main(int argc, char *argv[])
         else
         {
             binFileOffnen(argv[1]);
+            printf("Ninja Virtual Machine started\n");
+            listen(programmSpeicher);
+            ausfuehrung(programmSpeicher);
             binFileSchliessen();
         }
     }
