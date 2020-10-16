@@ -26,7 +26,7 @@ void push(int wert);
 int pop();
 void listen(unsigned int programSpeicher[]);
 void ausfuehrung(unsigned int programSpeicher[]);
-void binFileOffnen();
+void binFileOffnen(char *file);
 void binFileSchliessen();
 
 #endif

@@ -11,43 +11,44 @@ FILE *binFile;
 unsigned int *staticDataArea;
 unsigned int *programmSpeicher;
 
+// Versuchen zu offnen der File der im Kommandozeile gegeben wird
 void binFileOffnen(char *file)
 {
     char formatIdentifier[4];
     unsigned int versionCheck;
     binFile = fopen(file, "r");
-    if (binFile == NULL)
+    if (binFile == NULL) //ueberpruefen ob der file erfolgreich geoefnnet wird
     {
         printf("Error: cannot open code file '%s'", file);
         exit(-1);
     }
-    fread(formatIdentifier, sizeof(char), 4, binFile);
-    if (strncmp(formatIdentifier, "NJBF", 4) != 0)
+    fread(formatIdentifier, sizeof(char), 4, binFile); // die erste 4 bits lesen (Program-Format)
+    if (strncmp(formatIdentifier, "NJBF", 4) != 0)     // ueberpruefen ob die Format richtig ist
     {
-        printf("Die Format-Identifier ist nicht 'NJVM' !!\n");
+        printf("Die Format-Identifier ist nicht 'NJBF' !!\n");
         exit(-1);
     }
-    fread(&versionCheck, 1, sizeof(int), binFile);
-    if (versionCheck != version)
+    fread(&versionCheck, 1, sizeof(int), binFile); // dei naechste 4 bits lesen (version)
+    if (versionCheck != version)                   // ueberpruefen ob die Version richtig ist
     {
         printf("Program-Version ist nicht das gleiche Version wie die VM !!\n");
         exit(-1);
     }
-    fread(&instrZahl, 1, sizeof(int), binFile);
-    programmSpeicher = malloc(instrZahl * 4);
+    fread(&instrZahl, 1, sizeof(int), binFile); // die naechste 4 bits lesen (intsruktions-zahl bestimmen)
+    programmSpeicher = malloc(instrZahl * 4);   // programspeicher allocieren
     if (programmSpeicher == NULL)
     {
         printf("Problem beim Speicher allocating !!!\n");
         exit(-1);
     }
-    fread(&globalVarZahl, 1, sizeof(int), binFile);
-    staticDataArea = malloc(globalVarZahl * 4);
+    fread(&globalVarZahl, 1, sizeof(int), binFile); // die naechste 4 bits lesen (globalvariablen-zahl bestimmen)
+    staticDataArea = malloc(globalVarZahl * 4);     // SDA allocieren
     if (staticDataArea == NULL)
     {
         printf("Problem beim SDA-Speicher allocating !!!\n");
         exit(-1);
     }
-    fread(programmSpeicher, instrZahl, sizeof(int), binFile);
+    fread(programmSpeicher, instrZahl, sizeof(int), binFile); // die restliche bits in programspeicher lesen
     framePointer = 0;
     stackPointer = 0;
     programmCounter = 0;
@@ -274,39 +275,40 @@ void ausfuehrung(unsigned int programSpeicher[])
             ausgabe = (char)wert1; // der Wert zur Datentyp Character wandeln
             printf("%c", ausgabe);
         }
-        else if (opcode == pushg)
+        else if (opcode == pushg) // Mit hilfe von Global-VAriablen in SDA arbeiten:
         {
-            wert1 = staticDataArea[immediateWert];
-            push(wert1);
+            wert1 = staticDataArea[immediateWert]; // wer aus dem SDA holen
+            push(wert1);                           // der Wert auf dem Stack pushen
         }
-        else if (opcode == popg)
+        else if (opcode == popg) // Mit hilfe von Global-VAriablen in SDA arbeiten:
         {
-            wert1 = pop();
-            staticDataArea[immediateWert] = wert1;
+            wert1 = pop();                         // Wert von Stack holen
+            staticDataArea[immediateWert] = wert1; // der Wert in dem gewunschten platz im SDA speichern
         }
-        else if (opcode == asf)
+        else if (opcode == asf) // allocating Stack-Frame:
         {
+            push(framePointer);
             framePointer = stackPointer;
             stackPointer = stackPointer + immediateWert;
         }
-        else if (opcode == rsf)
+        else if (opcode == rsf) // reset Stack-Frame
         {
             stackPointer = framePointer;
             framePointer = pop();
         }
-        else if (opcode == pushl)
+        else if (opcode == pushl) // Mit hilfe von aloocated Stack-Frame arbeiten:
         {
             int gewunPos;
-            gewunPos = framePointer + immediateWert;
-            wert1 = stack[gewunPos];
-            push(wert1);
+            gewunPos = framePointer + immediateWert; // gewunschte Position ereichen
+            wert1 = stack[gewunPos];                 // der Wert aus dem Stack-Fframe nehmen
+            push(wert1);                             // auf dem Stack pushen
         }
-        else if (opcode == popl)
+        else if (opcode == popl) // Mit hilfe von aloocated Stack-Frame arbeiten:
         {
             int gewunPos;
-            gewunPos = framePointer + immediateWert;
-            wert1 = pop();
-            stack[gewunPos] = wert1;
+            gewunPos = framePointer + immediateWert; // gewunschte Position ereichen
+            wert1 = pop();                           // der Wert von dem Stack nehmen
+            stack[gewunPos] = wert1;                 // der Wert in dem gewunschten Platz im Stack-Frame
         }
         programmCounter++;
     }
@@ -320,25 +322,25 @@ int main(int argc, char *argv[])
         int abbruch = 1;
         for (int i = 1; i < argc; i++)
         {
-            if (strcmp(argv[i], "--help") == 0)
+            if (strcmp(argv[i], "--help") == 0) // Hilfe ausdrucken (wie die VM funktioniert bzw- benutzt werden soll)
             {
                 printf("usage: ./njvm [options] <code file>\n");
                 printf(" --version        show version and exit\n");
                 printf(" --help           show this help and exit\n");
                 exit(0);
             }
-            else if (strcmp(argv[i], "--version") == 0)
+            else if (strcmp(argv[i], "--version") == 0) // VM-Version ausdrucken und wann ist die compiliert war
             {
                 printf("Ninja Virtual Machine Version %d (compiled Oct 14 2020, 22:54:23)\n", version);
                 exit(0);
             }
-            else if ((strncmp(argv[i], "--", 2) == 0) || (strncmp(argv[i], "--", 1) == 0))
+            else if ((strncmp(argv[i], "--", 2) == 0) || (strncmp(argv[i], "--", 1) == 0)) // ueberpruefen ob ein unbekanntes Befehl gegeben wird
             {
                 printf("unknown command line argument '%s', try './njvm --help'\n", argv[i]);
                 exit(-1);
             }
 
-            if (abbruch >= 2)
+            if (abbruch >= 2) //es muss nicht mehr als 2 Parameter gegeben werden
             {
                 break;
             }
