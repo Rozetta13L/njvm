@@ -192,14 +192,14 @@ void ausfuehrung(unsigned int programSpeicher[])
     int wert1, wert2;
     unsigned char opcode;
     int immediateWert, instruction;
-    while (1) // bricht ab, wenn halt kommt
-    {         // Das Gleiche wie Methode 'listen'
+    do // bricht ab, wenn halt kommt
+    {  // Das Gleiche wie Methode 'listen'
         instruction = programSpeicher[programmCounter];
         opcode = instruction >> 24;
         immediateWert = SIGN_EXTEND(IMMEDIATE(programSpeicher[programmCounter]));
         if (opcode == halt)
         {
-            break; // Abbruch-Bedingung
+            //break; // Abbruch-Bedingung
         }
         else if (opcode == pushc)
         {
@@ -311,7 +311,7 @@ void ausfuehrung(unsigned int programSpeicher[])
             stack[gewunPos] = wert1;                 // der Wert in dem gewunschten Platz im Stack-Frame
         }
         programmCounter++;
-    }
+    } while (opcode != halt);
 }
 
 // Main-Methode

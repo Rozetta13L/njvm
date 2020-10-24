@@ -2,6 +2,7 @@
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "njvm3.h"
 
 unsigned int globalVarZahl, instrZahl;
@@ -10,6 +11,8 @@ unsigned int stack[STACKSIZE];
 FILE *binFile;
 unsigned int *staticDataArea;
 unsigned int *programmSpeicher;
+unsigned char opcode;
+int immediateWert, instruction;
 
 // Versuchen zu offnen der File der im Kommandozeile gegeben wird
 void binFileOffnen(char *file)
@@ -62,6 +65,7 @@ void binFileSchliessen()
     if (pruefen == 0) // File-Schliessung ist erfoelgt
     {
         printf("Ninja Virtual Machine stopped\n");
+        exit(0);
     }
     else
     {
@@ -71,25 +75,29 @@ void binFileSchliessen()
 }
 
 // Debugger
-void debugger(FILE *binFile)
+void debugger()
 {
+    stackPointer = 0;    // SP auf 0 setzen
+    framePointer = 0;    // FP auf 0 setzen
     programmCounter = 0; // PC auf 0 setzen
-    printf("DEBUG: file 'prog1_2.bin' loaded (code size = %d, data size = &d)", instrZahl, globalVarZahl);
-    char *debugInput;
-
+    printf("DEBUG: file 'prog1_2.bin' loaded (code size = %d, data size = %d)\n", instrZahl, globalVarZahl);
+    printf("Ninja Virtual Machine started\n");
+    listen(programmSpeicher);
+    char debugInput[10];
+    int prevPC;
     while (1)
     {
         printf("DEBUG: inspect, list, breakpoint, step, run, quit?\n");
         scanf("%s", debugInput);
-        if (strncmp(debugInput, "i", 1) == 0)
+        if (strncmp(debugInput, "i", 1) == 0) // ispect
         {
-            printf("inspect: stack, data?");
+            printf("inspect: stack, data?\n");
             scanf("%s", debugInput);
-            if (strncmp(debugInput, "s", 1) == 0)
+            if (strncmp(debugInput, "s", 1) == 0) // stack
             {
                 int durchStack;
                 // Schleife, um durch den Stack zu laufen, aber von obe nach unten(ruckwaerts)
-                for (durchStack = stackPointer; durchStack <= 0; durchStack--)
+                for (durchStack = stackPointer; durchStack >= 0; durchStack--)
                 {
                     if (durchStack == stackPointer && durchStack == framePointer)
                     {
@@ -108,36 +116,52 @@ void debugger(FILE *binFile)
                         printf("               %04d \t\t %d  \n", durchStack, stack[durchStack]);
                     }
                 }
-                printf("\t\t\t   ---Bottom of Stack---   \t\t\t");
+                printf("\t\t\t   ---Bottom of Stack---   \t\t\t\n");
             }
-            else if (strncmp(debugInput, "d", 1) == 0)
+            else if (strncmp(debugInput, "d", 1) == 0) // data
             {
                 int count;
                 for (count = 0; count < globalVarZahl; count++)
                 {
                     printf("data[%04d]:\t\t %d\n", count, staticDataArea[count]);
                 }
-                printf("\t\t\t   ---End of Data---   \t\t\t");
+                printf("\t\t\t   ---End of Data---   \t\t\t\n");
             }
             listen(programmSpeicher);
         }
-        else if (strncmp(debugInput, "l", 1) == 0)
+        else if (strncmp(debugInput, "l", 1) == 0) // list
         {
-            /* code */
+            prevPC = programmCounter;
+            programmCounter = 0;
+            for (int i = 0; i < instrZahl; i++)
+            {
+                listen(programmSpeicher);
+                programmCounter++;
+            }
+            printf("\t\t\t   ---End of Code---   \t\t\t\n");
+            programmCounter = prevPC;
+            listen(programmSpeicher);
         }
-        else if (strncmp(debugInput, "b", 1) == 0)
+        else if (strncmp(debugInput, "b", 1) == 0) // breakpoint
         {
-            /* code */
+            printf("DEBUG [breakpoint}: address to set. -1 to clear, <ret> for no change\n");
         }
-        else if (strncmp(debugInput, "s", 1) == 0)
+        else if (strncmp(debugInput, "s", 1) == 0) // step
         {
-            /* code */
+            ausfuehrung(programmSpeicher);
+            programmCounter++;
+            listen(programmSpeicher);
         }
-        else if (strncmp(debugInput, "r", 1) == 0)
+        else if (strncmp(debugInput, "r", 1) == 0) // run
         {
-            /* code */
+            do
+            {
+                ausfuehrung(programmSpeicher);
+                programmCounter++;
+            } while (opcode != halt);
+            break;
         }
-        else if (strncmp(debugInput, "q", 1) == 0)
+        else if (strncmp(debugInput, "q", 1) == 0) //quit
         {
             break;
         }
@@ -179,10 +203,6 @@ int pop()
 // Der Program listen und ausgeben
 void listen(unsigned int programSpeicher[])
 {
-
-    unsigned char opcode;
-    int immediateWert, instruction;
-
     instruction = programSpeicher[programmCounter];                           // Die naechste Instruktion in dem Program lesen
     opcode = instruction >> 24;                                               // Der Opcode durch rechts schieben Operator kriegen, weil er in dem 8 Oebersten Bits stehet
     immediateWert = SIGN_EXTEND(IMMEDIATE(programSpeicher[programmCounter])); // Der Wert, der gepusht werden soll. sigh_extend ist benutzt im falle von negativen Zahlen
@@ -295,10 +315,7 @@ void listen(unsigned int programSpeicher[])
 // Die Program-Instruktionen ausfuehren und das Ergebnis rechnen
 void ausfuehrung(unsigned int programSpeicher[])
 {
-
     int wert1, wert2, ergebnis;
-    unsigned char opcode;
-    int immediateWert, instruction;
 
     // Das Gleiche wie Methode 'listen'
     instruction = programSpeicher[programmCounter];
@@ -306,7 +323,6 @@ void ausfuehrung(unsigned int programSpeicher[])
     immediateWert = SIGN_EXTEND(IMMEDIATE(programSpeicher[programmCounter]));
     if (opcode == halt)
     {
-        break; // Abbruch-Bedingung
     }
     else if (opcode == pushc)
     {
@@ -514,25 +530,28 @@ int main(int argc, char *argv[])
                 printf("Ninja Virtual Machine Version %d (compiled Oct 14 2020, 22:54:23)\n", version);
                 exit(0);
             }
-            else if ((strncmp(argv[i], "--", 2) == 0) || (strncmp(argv[i], "--", 1) == 0)) // ueberpruefen ob ein unbekanntes Befehl gegeben wird
+        }
+        for (j = 1; j < argc; j++)
+        {
+            if (strcmp(argv[j], "--debug") == 0)
+            {
+                if (argc > 3)
+                {
+                    printf("Error: more than one code file specified\n");
+                }
+                if (j == 2)
+                {
+                    binFileOffnen(argv[3]);
+                }
+                binFileOffnen(argv[2]);
+                debugger();
+                binFileSchliessen();
+            }
+            else if ((strncmp(argv[j], "--", 2) == 0) || (strncmp(argv[j], "--", 1) == 0)) // ueberpruefen ob ein unbekanntes Befehl gegeben wird
             {
                 printf("unknown command line argument '%s', try './njvm --help'\n", argv[i]);
                 exit(-1);
             }
-        }
-        for (j = 1; j < argc; j++)
-        {
-            if (argc > 2)
-            {
-                printf("Error: more than one code file specified\n");
-            }
-            if (j == 1)
-            {
-                binFileOffnen(argv[2]);
-            }
-            binFileOffnen(argv[1]);
-            debugger();
-            binFileSchliessen();
         }
         if (argc > 2)
         {
@@ -540,10 +559,17 @@ int main(int argc, char *argv[])
         }
         else
         {
+
+            stackPointer = 0;    // SP auf 0 setzen
+            framePointer = 0;    // FP auf 0 setzen
+            programmCounter = 0; // PC auf 0 setzen
             binFileOffnen(argv[1]);
             printf("Ninja Virtual Machine started\n");
-            listen(programmSpeicher);
-            ausfuehrung(programmSpeicher);
+            do
+            {
+                ausfuehrung(programmSpeicher);
+                programmCounter++;
+            } while (opcode != halt);
             binFileSchliessen();
         }
     }

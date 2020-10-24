@@ -37,5 +37,6 @@ void listen(unsigned int programSpeicher[]);
 void ausfuehrung(unsigned int programSpeicher[]);
 void binFileOffnen(char *file);
 void binFileSchliessen();
+void debugger();
 
 #endif
