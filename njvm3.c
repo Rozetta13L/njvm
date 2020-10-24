@@ -155,14 +155,15 @@ void debugger()
                 printf("DEBUG [breakpoint}: set at %d\n", breakPoint);
             }
             printf("DEBUG [breakpoint}: address to set. -1 to clear, 0 for no change\n");
-            scanf("%d", breakWert);
-            breakPoint = breakWert;
-            if (breakPoint == -1)
+            scanf("%d", &breakWert);
+            if (breakWert == -1)
             {
+                breakPoint = breakWert;
                 printf("DEBUG [breakpoint}: now cleared\n");
             }
-            else if (breakPoint > 0)
+            else if (breakWert > 0)
             {
+                breakPoint = breakWert;
                 printf("DEBUG [breakpoint}: now set at %d\n", breakPoint);
             }
             listen(programmSpeicher);
@@ -175,16 +176,30 @@ void debugger()
         }
         else if (strncmp(debugInput, "r", 1) == 0) // run
         {
-            do
+            while (1)
             {
-                ausfuehrung(programmSpeicher);
-                programmCounter++;
-            } while (opcode != halt);
-            break;
+                if (breakPoint > 0)
+                {
+                    ausfuehrung(programmSpeicher);
+                    programmCounter++;
+                    if (breakPoint - 1 == programmCounter)
+                    {
+                        ausfuehrung(programmSpeicher);
+                        programmCounter++;
+                        listen(programmSpeicher);
+                        break;
+                    }
+                }
+                else
+                {
+                    ausfuehrung(programmSpeicher);
+                    programmCounter++;
+                }
+            }
         }
         else if (strncmp(debugInput, "q", 1) == 0) //quit
         {
-            break;
+            binFileSchliessen();
         }
     }
 }
@@ -567,7 +582,6 @@ int main(int argc, char *argv[])
                 }
                 binFileOffnen(argv[2]);
                 debugger();
-                binFileSchliessen();
             }
             else if ((strncmp(argv[j], "--", 2) == 0) || (strncmp(argv[j], "--", 1) == 0)) // ueberpruefen ob ein unbekanntes Befehl gegeben wird
             {
@@ -587,12 +601,11 @@ int main(int argc, char *argv[])
             programmCounter = 0; // PC auf 0 setzen
             binFileOffnen(argv[1]);
             printf("Ninja Virtual Machine started\n");
-            do
+            while (1)
             {
                 ausfuehrung(programmSpeicher);
                 programmCounter++;
-            } while (opcode != halt);
-            binFileSchliessen();
+            }
         }
     }
     else
