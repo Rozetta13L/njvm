@@ -80,6 +80,7 @@ void debugger()
     stackPointer = 0;    // SP auf 0 setzen
     framePointer = 0;    // FP auf 0 setzen
     programmCounter = 0; // PC auf 0 setzen
+    int breakPoint = -1;
     printf("DEBUG: file 'prog1_2.bin' loaded (code size = %d, data size = %d)\n", instrZahl, globalVarZahl);
     printf("Ninja Virtual Machine started\n");
     listen(programmSpeicher);
@@ -144,7 +145,27 @@ void debugger()
         }
         else if (strncmp(debugInput, "b", 1) == 0) // breakpoint
         {
-            printf("DEBUG [breakpoint}: address to set. -1 to clear, <ret> for no change\n");
+            int breakWert;
+            if (breakPoint == -1)
+            {
+                printf("DEBUG [breakpoint}: Cleared\n");
+            }
+            else if (breakPoint > 0)
+            {
+                printf("DEBUG [breakpoint}: set at %d\n", breakPoint);
+            }
+            printf("DEBUG [breakpoint}: address to set. -1 to clear, 0 for no change\n");
+            scanf("%d", breakWert);
+            breakPoint = breakWert;
+            if (breakPoint == -1)
+            {
+                printf("DEBUG [breakpoint}: now cleared\n");
+            }
+            else if (breakPoint > 0)
+            {
+                printf("DEBUG [breakpoint}: now set at %d\n", breakPoint);
+            }
+            listen(programmSpeicher);
         }
         else if (strncmp(debugInput, "s", 1) == 0) // step
         {
@@ -323,6 +344,7 @@ void ausfuehrung(unsigned int programSpeicher[])
     immediateWert = SIGN_EXTEND(IMMEDIATE(programSpeicher[programmCounter]));
     if (opcode == halt)
     {
+        binFileSchliessen();
     }
     else if (opcode == pushc)
     {
