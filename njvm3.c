@@ -114,7 +114,7 @@ void debugger()
                     }
                     else
                     {
-                        printf("               %04d \t\t %d  \n", durchStack, stack[durchStack]);
+                        printf("               \t\t %04d \t\t %d  \n", durchStack, stack[durchStack]);
                     }
                 }
                 printf("\t\t\t   ---Bottom of Stack---   \t\t\t\n");
@@ -420,7 +420,7 @@ void ausfuehrung(unsigned int programSpeicher[])
     else if (opcode == wrint)
     {
         wert1 = pop();
-        printf("%d", wert1); // Wert aus dem Stack nehmen, und auf stdout ausgeben
+        printf("%d\n", wert1); // Wert aus dem Stack nehmen, und auf stdout ausgeben
     }
     else if (opcode == rdchr)
     {
@@ -575,12 +575,16 @@ int main(int argc, char *argv[])
                 if (argc > 3)
                 {
                     printf("Error: more than one code file specified\n");
+                    exit(0);
                 }
                 if (j == 2)
                 {
-                    binFileOffnen(argv[3]);
+                    binFileOffnen(argv[1]);
                 }
-                binFileOffnen(argv[2]);
+                else if (j == 1)
+                {
+                    binFileOffnen(argv[2]);
+                }
                 debugger();
             }
             else if ((strncmp(argv[j], "--", 2) == 0) || (strncmp(argv[j], "--", 1) == 0)) // ueberpruefen ob ein unbekanntes Befehl gegeben wird
