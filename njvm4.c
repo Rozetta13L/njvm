@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "njvm3.h"
+#include "njvm4.h"
 
 unsigned int globalVarZahl, instrZahl;
 int framePointer, stackPointer, programmCounter = 0;
@@ -89,40 +89,40 @@ void debugger()
     while (1)
     {
         printf("DEBUG: inspect, list, breakpoint, step, run, quit?\n");
-        scanf("%s", debugInput);              // Entscheidungs-Wahl
-        if (strncmp(debugInput, "i", 1) == 0) // ispectieren der Stack oder SDA und sehen was dadrin steht
+        scanf("%s", debugInput);
+        if (strncmp(debugInput, "i", 1) == 0) // ispect
         {
             printf("inspect: stack, data?\n");
             scanf("%s", debugInput);
             if (strncmp(debugInput, "s", 1) == 0) // stack
             {
                 int durchStack;
-                // Schleife, um durch den Stack zu laufen, aber von oben nach unten(ruckwaerts)
+                // Schleife, um durch den Stack zu laufen, aber von obe nach unten(ruckwaerts)
                 for (durchStack = stackPointer; durchStack >= 0; durchStack--)
                 {
-                    if (durchStack == stackPointer && durchStack == framePointer) // wenn  die SP und FP auf dem glecihen Platz auf dem Stack zeigen
+                    if (durchStack == stackPointer && durchStack == framePointer)
                     {
                         printf("sp,fp\t-->\t\t %04d \t\t xxxx\n", durchStack);
                     }
-                    else if (durchStack == stackPointer) // wo der SP ist (nachste freie platz im Stack)
+                    else if (durchStack == stackPointer)
                     {
                         printf("sp   \t-->\t\t %04d \t\t xxxx\n", durchStack);
                     }
-                    else if (durchStack == framePointer) // wo der gewahlte frame ist
+                    else if (durchStack == framePointer)
                     {
                         printf("fp   \t-->\t\t %04d \t\t %d  \n", durchStack, stack[durchStack]);
                     }
-                    else // alle andere platze im Stack zeigen und die gespeicherte werte drin
+                    else
                     {
                         printf("               \t\t %04d \t\t %d  \n", durchStack, stack[durchStack]);
                     }
                 }
                 printf("\t\t\t   ---Bottom of Stack---   \t\t\t\n");
             }
-            else if (strncmp(debugInput, "d", 1) == 0) // SDA
+            else if (strncmp(debugInput, "d", 1) == 0) // data
             {
                 int count;
-                for (count = 0; count < globalVarZahl; count++) // SDA schleife fur zeigen mit den Werte drin
+                for (count = 0; count < globalVarZahl; count++)
                 {
                     printf("data[%04d]:\t\t %d\n", count, staticDataArea[count]);
                 }
@@ -130,47 +130,46 @@ void debugger()
             }
             listen(programmSpeicher);
         }
-        else if (strncmp(debugInput, "l", 1) == 0) // INstruktionen listen
+        else if (strncmp(debugInput, "l", 1) == 0) // list
         {
-            prevPC = programmCounter; // jetztige PC speichern
-            programmCounter = 0;      // PC auf 0 setzen um durch den BinFile Instruktionen durchzugehen un es listen
+            prevPC = programmCounter;
+            programmCounter = 0;
             for (int i = 0; i < instrZahl; i++)
             {
                 listen(programmSpeicher);
                 programmCounter++;
             }
             printf("\t\t\t   ---End of Code---   \t\t\t\n");
-            programmCounter = prevPC; // den PC zuruck setzen auf was er war
+            programmCounter = prevPC;
             listen(programmSpeicher);
         }
-        else if (strncmp(debugInput, "b", 1) == 0) // breakpoint setzen
+        else if (strncmp(debugInput, "b", 1) == 0) // breakpoint
         {
             int breakWert;
             if (breakPoint == -1)
             {
                 printf("DEBUG [breakpoint}: Cleared\n");
             }
-            else if (breakPoint > 0) // wenn eine Breakpoint schon gesetzt ist
+            else if (breakPoint > 0)
             {
                 printf("DEBUG [breakpoint}: set at %d\n", breakPoint);
             }
             printf("DEBUG [breakpoint}: address to set. -1 to clear, 0 for no change\n");
-            scanf("%d", &breakWert); // breakpointe von User-Angabe nehmen
+            scanf("%d", &breakWert);
             if (breakWert == -1)
             {
-                breakPoint = breakWert; // breakpoint cleared
+                breakPoint = breakWert;
                 printf("DEBUG [breakpoint}: now cleared\n");
             }
             else if (breakWert > 0)
             {
-                breakPoint = breakWert; // breakpoint gesetzt
+                breakPoint = breakWert;
                 printf("DEBUG [breakpoint}: now set at %d\n", breakPoint);
             }
             listen(programmSpeicher);
         }
         else if (strncmp(debugInput, "s", 1) == 0) // step
         {
-            // eine Instruktion ausfuehren
             ausfuehrung(programmSpeicher);
             programmCounter++;
             listen(programmSpeicher);
@@ -179,11 +178,11 @@ void debugger()
         {
             while (1)
             {
-                if (breakPoint > 0) // uberprufen ob eine breakpoint gesetzt ist
+                if (breakPoint > 0)
                 {
                     ausfuehrung(programmSpeicher);
                     programmCounter++;
-                    if (breakPoint - 1 == programmCounter) // wenn die gewunschte breakpoint platz erreicht ist dann abbrechen
+                    if (breakPoint - 1 == programmCounter)
                     {
                         ausfuehrung(programmSpeicher);
                         programmCounter++;
@@ -200,7 +199,7 @@ void debugger()
         }
         else if (strncmp(debugInput, "q", 1) == 0) //quit
         {
-            binFileSchliessen(); // debugger verlassen
+            binFileSchliessen();
         }
     }
 }
@@ -571,18 +570,18 @@ int main(int argc, char *argv[])
         }
         for (j = 1; j < argc; j++)
         {
-            if (strcmp(argv[j], "--debug") == 0) // debugger starten
+            if (strcmp(argv[j], "--debug") == 0)
             {
-                if (argc > 3) // wenn mehr als ein file als parameter gegeben ist
+                if (argc > 3)
                 {
                     printf("Error: more than one code file specified\n");
                     exit(0);
                 }
-                if (j == 2) // wenn --debug als zweite parameter ist
+                if (j == 2)
                 {
                     binFileOffnen(argv[1]);
                 }
-                else if (j == 1) // wenn --debug als erste parameter ist
+                else if (j == 1)
                 {
                     binFileOffnen(argv[2]);
                 }
