@@ -27,16 +27,22 @@
 #define jmp 23
 #define brf 24
 #define brt 25
+#define call 26
+#define ret 27
+#define drop 28
+#define pushr 29
+#define popr 30
+#define dup 31
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i)&0x00800000 ? (i) | 0xFF000000 : (i))
 #define STACKSIZE 10000
 
 void push(int wert);
-int pop();
+int pop(void);
 void listen(unsigned int programSpeicher[]);
 void ausfuehrung(unsigned int programSpeicher[]);
 void binFileOffnen(char *file);
-void binFileSchliessen();
-void debugger();
+void binFileSchliessen(void);
+void debugger(void);
 
 #endif
