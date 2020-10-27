@@ -495,7 +495,7 @@ void ausfuehrung(unsigned int programSpeicher[])
         wert1 = pop();                           // der Wert von dem Stack nehmen
         stack[gewunPos] = wert1;                 // der Wert in dem gewunschten Platz im Stack-Frame
     }
-    else if (opcode == eq)
+    else if (opcode == eq) // die 2 Werte sind gleich
     {
         wert2 = pop();
         wert1 = pop();
@@ -503,7 +503,7 @@ void ausfuehrung(unsigned int programSpeicher[])
         ergebnis = wert1 == wert2;
         push(ergebnis);
     }
-    else if (opcode == ne)
+    else if (opcode == ne) // die 2 Werte nicht gleich
     {
         wert2 = pop();
         wert1 = pop();
@@ -511,7 +511,7 @@ void ausfuehrung(unsigned int programSpeicher[])
         ergebnis = wert1 != wert2;
         push(ergebnis);
     }
-    else if (opcode == lt)
+    else if (opcode == lt) // der 2 gepopte-Wert ist kleiner als 1 gepopte-Wert
     {
         wert2 = pop();
         wert1 = pop();
@@ -519,7 +519,7 @@ void ausfuehrung(unsigned int programSpeicher[])
         ergebnis = wert1 < wert2;
         push(ergebnis);
     }
-    else if (opcode == le)
+    else if (opcode == le) // der 2 gepopte-Wert ist kleiner oder gleich als 1 gepopte-Wert
     {
         wert2 = pop();
         wert1 = pop();
@@ -527,7 +527,7 @@ void ausfuehrung(unsigned int programSpeicher[])
         ergebnis = wert1 <= wert2;
         push(ergebnis);
     }
-    else if (opcode == gt)
+    else if (opcode == gt) // der 2 gepopte-Wert ist grosser als 1 gepopte-Wert
     {
         wert2 = pop();
         wert1 = pop();
@@ -535,7 +535,7 @@ void ausfuehrung(unsigned int programSpeicher[])
         ergebnis = wert1 > wert2;
         push(ergebnis);
     }
-    else if (opcode == ge)
+    else if (opcode == ge) // der 2 gepopte-Wert ist grosser oder gleich als 1 gepopte-Wert
     {
         wert2 = pop();
         wert1 = pop();
@@ -543,11 +543,11 @@ void ausfuehrung(unsigned int programSpeicher[])
         ergebnis = wert1 >= wert2;
         push(ergebnis);
     }
-    else if (opcode == jmp)
+    else if (opcode == jmp) // springen zum gewahlten PLatz in Intsruktionen-Liste
     {
         programmCounter = immediateWert - 1;
     }
-    else if (opcode == brf)
+    else if (opcode == brf) // springen zum gewahlten PLatz in Intsruktionen-Liste falls der wert gleich 0 ist(das geht durch die gleichheit Instruktionen)
     {
         wert1 = pop();
         if (wert1 == 0)
@@ -558,10 +558,10 @@ void ausfuehrung(unsigned int programSpeicher[])
         {
         }
     }
-    else if (opcode == brt)
+    else if (opcode == brt) // springen zum gewahlten PLatz in Intsruktionen-Liste falls der wert gleich 1 ist(das geht durch die gleichheit Instruktionen)
     {
         wert1 = pop();
-        if (wert1 == 0)
+        if (wert1 == 1)
         {
             programmCounter = immediateWert - 1;
         }
@@ -569,32 +569,32 @@ void ausfuehrung(unsigned int programSpeicher[])
         {
         }
     }
-    else if (opcode == call)
+    else if (opcode == call) // pushen der nachste Instruktions PLatz und springen zu der gewahlten Instruktion
     {
         push(programmCounter + 1);
-        programmCounter = immediateWert + 1;
+        programmCounter = immediateWert - 1;
     }
-    else if (opcode == ret)
+    else if (opcode == ret) // popen der Wert vom Stack und es im Programmcounter speichern
     {
         wert1 = pop();
-        programmCounter = wert1 - 1
+        programmCounter = wert1 - 1;
     }
-    else if (opcode == drop)
+    else if (opcode == drop) // n Werte vom Stack popen
     {
         for (int i = 0; i < immediateWert; i++)
         {
             pop();
         }
     }
-    else if (opcode == pushr)
+    else if (opcode == pushr) // der gespeicherten Wert im Return Value Register auf dem Stack pushen
     {
         push(valueRegister);
     }
-    else if (opcode == popr)
+    else if (opcode == popr) // der gepopten WErt im Return Value Register speichern
     {
         valueRegister = pop();
     }
-    else if (opcode == dup)
+    else if (opcode == dup) // der letzten Wert im Stack duplitizieren
     {
         wert1 = pop();
         wert2 = wert1 * wert1;
