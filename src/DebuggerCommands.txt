@@ -1,0 +1,22 @@
+
+NJVM-Debugger Commands: i[inspect], l[list], b[breakpoint], s[step], r[run], q[quit]
+
+1. inspect: 
+     man kann den Stack bzw. Static Data Area-Inhalt und alle Daten drin lesen.
+
+2. list:
+     Der, ins Memory,geladete Ninja-Programm Drucken
+
+3. breakpoint:
+     man kann eine Breakpoint setzen, an die den Programm anhält.
+     man kann auch den Breakpoint zurücksetzen oder sie ungeändert lassen.
+
+4. step:
+     führt nur ein Schritt von den Ninja-Programm aus, und druck der Schritt aus
+
+5. run: 
+     lässt den Programm ohne anzuhalten führen, wenn keine Breakpoint gesetzt ist.
+     Wenn ein Breakpoint gesetzt ist, dann hält er an sie an.
+
+6. quit:
+     stopt die njvm
