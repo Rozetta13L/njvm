@@ -121,9 +121,16 @@ int pop(void)
     }
     else
     {
-        stackPointer = stackPointer - 1; // Stackpointer zeigt  auf dem letzt gespeicherten Wert
-        int wert = stack[stackPointer];  // Der Wert nehmen
-        stack[stackPointer] = 0;         // Der Wert zuruecksetzen
+        if (stack[stackPointer].isObjRef)
+        {
+            /* code */
+        }
+        else
+        {
+            stackPointer = stackPointer - 1; // Stackpointer zeigt  auf dem letzt gespeicherten Wert
+            int wert = stack[stackPointer];  // Der Wert nehmen
+            stack[stackPointer] = 0;         // Der Wert zuruecksetzen
+        }
         return wert;
     }
 }
