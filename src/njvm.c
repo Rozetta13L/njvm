@@ -121,15 +121,15 @@ int pop(void)
     }
     else
     {
+        int wert;
+        stackPointer = stackPointer - 1; // Stackpointer zeigt  auf dem letzt gespeicherten Wert
         if (stack[stackPointer].isObjRef)
         {
-            /* code */
+            wert = *(int *)stack[stackPointer].u.ObjRef; // Der Wert nehmen
         }
         else
         {
-            stackPointer = stackPointer - 1; // Stackpointer zeigt  auf dem letzt gespeicherten Wert
-            int wert = stack[stackPointer];  // Der Wert nehmen
-            stack[stackPointer] = 0;         // Der Wert zuruecksetzen
+            wert = stack[stackPointer].u.number; // Der Wert nehmen
         }
         return wert;
     }
@@ -169,11 +169,25 @@ void debugger(void)
                     }
                     else if (durchStack == framePointer) // wo der gewahlte frame ist
                     {
-                        printf("fp   \t-->\t\t %04d \t\t %d  \n", durchStack, stack[durchStack]);
+                        if (stack[stackPointer].isObjRef)
+                        {
+                            printf("fp   \t-->\t\t %04d ObjRef\t\t %ls  \n", durchStack, stack[durchStack].u.ObjRef);
+                        }
+                        else
+                        {
+                            printf("fp   \t-->\t\t %04d Number\t\t %d  \n", durchStack, stack[durchStack].u.number);
+                        }
                     }
                     else // alle andere platze im Stack zeigen und die gespeicherte werte drin
                     {
-                        printf("               \t\t %04d \t\t %d  \n", durchStack, stack[durchStack]);
+                        if (stack[stackPointer].isObjRef)
+                        {
+                            printf("               \t\t %04d ObjRef\t\t %ls  \n", durchStack, stack[durchStack].u.ObjRef);
+                        }
+                        else
+                        {
+                            printf("               \t\t %04d Number\t\t %d  \n", durchStack, stack[durchStack].u.number);
+                        }
                     }
                 }
                 printf("\t\t\t   ---Bottom of Stack---   \t\t\t\n");
