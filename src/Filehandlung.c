@@ -1,9 +1,21 @@
 #include "Filehandlung.h"
 
+typedef int Object;
+typedef Object *ObjRef;
+typedef struct
+{
+    bool isObjRef;
+    union
+    {
+        ObjRef ObjRef;
+        int number;
+    } u;
+
+} StackSlot;
 unsigned int globalVarZahl, instrZahl;
 int framePointer, stackPointer, programmCounter = 0;
 FILE *binFile;
-unsigned int *staticDataArea;
+ObjRef *staticDataArea;
 unsigned int *programmSpeicher;
 
 // Versuchen zu offnen der File der im Kommandozeile gegeben wird
@@ -36,9 +48,9 @@ void binFileOffnen(char *file)
         printf("Problem beim Speicher allocating !!!\n");
         exit(-1);
     }
-    fread(&globalVarZahl, 1, sizeof(int), binFile); // die naechste 4 bits lesen (globalvariablen-zahl bestimmen)
-    staticDataArea = malloc(globalVarZahl * 4);     // SDA allocieren
-    if (staticDataArea == NULL)                     // ueberpruefen ob die SDA erfolgreich Memory bekommen hat
+    fread(&globalVarZahl, 1, sizeof(int), binFile);            // die naechste 4 bits lesen (globalvariablen-zahl bestimmen)
+    staticDataArea = malloc(globalVarZahl * (sizeof(ObjRef))); // SDA allocieren
+    if (staticDataArea == NULL)                                // ueberpruefen ob die SDA erfolgreich Memory bekommen hat
     {
         printf("Problem beim SDA-Speicher allocating !!!\n");
         exit(-1);

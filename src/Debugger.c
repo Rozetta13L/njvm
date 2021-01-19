@@ -1,10 +1,22 @@
 #include "Debugger.h"
 
+extern typedef int Object;
+extern typedef Object *ObjRef;
+extern typedef struct
+{
+    bool isObjRef;
+    union
+    {
+        ObjRef ObjRef;
+        int number;
+    } u;
+
+} StackSlot;
 extern int framePointer, stackPointer, programmCounter;
-extern unsigned int *staticDataArea;
+extern ObjRef *staticDataArea;
 extern unsigned int *programmSpeicher;
 extern unsigned int globalVarZahl, instrZahl;
-unsigned int stack[STACKSIZE];
+StackSlot stack[STACKSIZE];
 extern char *fileName;
 int instruction;
 // Debugger

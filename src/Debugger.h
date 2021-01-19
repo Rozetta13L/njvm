@@ -5,13 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include "njvm.h"
 
-#define version 4
-#define STACKSIZE 10000
 
-void listen(int instruktion);
-void ausfuehrung(int instruktion);
-void binFileSchliessen(void);
-void debugger(void);
 
 #endif

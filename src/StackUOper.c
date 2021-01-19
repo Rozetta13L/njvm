@@ -1,14 +1,15 @@
 #include "Operationen.h"
 
 extern int framePointer, stackPointer, programmCounter;
-extern unsigned int stack[STACKSIZE];
-extern unsigned int *staticDataArea;
+extern StackSlot stack[STACKSIZE];
+extern ObjRef *staticDataArea;
 extern unsigned int *programmSpeicher;
 unsigned char opcode;
-int immediateWert, valueRegister;
+int immediateWert;
+ObjRef valueRegister;
 
 // Wert in dem nachsten freien Platz auf dem Stack speichern
-void push(int wert)
+void push(int wert, bool isObject)
 {
     if (stackPointer > STACKSIZE) // Der Stack ist voll, keine Werte können mehr drin gespeichert werden
     {
@@ -17,8 +18,18 @@ void push(int wert)
     }
     else
     {
-        stack[stackPointer] = wert;      // Der Wert in dem freien Platz speichern
-        stackPointer = stackPointer + 1; // Stackpointer zeigt auf dem naechsten freien Platz
+        if (isObject)
+        {
+            stack[stackPointer].u.isObjRef = true;
+            stack[stackPointer].u.ObjRef = wert;
+            stackPointer = stackPointer + 1; // Stackpointer zeigt auf dem naechsten freien Platz
+        }
+        else
+        {
+            stack[stackPointer].u.isObjRef = false;
+            stack[stackPointer].u.number = wert;
+            stackPointer = stackPointer + 1; // Stackpointer zeigt auf dem naechsten freien Platz
+        }
     }
 }
 

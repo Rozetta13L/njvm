@@ -5,10 +5,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#define version 4
+#include "njvm.h"
 
-void binFileOffnen(char *file);
-void binFileSchliessen(void);
+#define version 5
+
 
 
 #endif
