@@ -1,18 +1,28 @@
-#include <stdio.h>
-#include <time.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include "njvm4.h"
+#include "njvm.h"
 
+char *fileName = NULL;
+unsigned char opcode;
+int immediateWert, instruction;
 unsigned int globalVarZahl, instrZahl;
 int framePointer, stackPointer, programmCounter = 0;
-unsigned int stack[STACKSIZE];
 FILE *binFile;
-unsigned int *staticDataArea;
 unsigned int *programmSpeicher;
-unsigned char opcode;
-int immediateWert, instruction, valueRegister;
+
+typedef int Object;
+typedef Object *ObjRef;
+typedef struct
+{
+    bool isObjRef;
+    union
+    {
+        ObjRef ObjRef;
+        int number;
+    } u;
+
+} StackSlot;
+ObjRef valueRegister;
+ObjRef *staticDataArea;
+StackSlot stack[STACKSIZE];
 
 // Versuchen zu offnen der File der im Kommandozeile gegeben wird
 void binFileOffnen(char *file)
@@ -31,7 +41,7 @@ void binFileOffnen(char *file)
         printf("Die Format-Identifier ist nicht 'NJBF' !!\n");
         exit(-1);
     }
-    fread(&versionCheck, 1, sizeof(int), binFile); // dei naechste 4 bits lesen (version)
+    fread(&versionCheck, 1, sizeof(int), binFile); // die naechste 4 bits lesen (version)
     if (versionCheck != version)                   // ueberpruefen ob die Version richtig ist
     {
         printf("Program-Version ist nicht das gleiche Version wie die VM !!\n");
@@ -39,62 +49,111 @@ void binFileOffnen(char *file)
     }
     fread(&instrZahl, 1, sizeof(int), binFile); // die naechste 4 bits lesen (intsruktions-zahl bestimmen)
     programmSpeicher = malloc(instrZahl * 4);   // programspeicher allocieren
-    if (programmSpeicher == NULL)
+    if (programmSpeicher == NULL)               // ueberpruefen ob der programspeicher erfolgreich Memory bekommen hat
     {
         printf("Problem beim Speicher allocating !!!\n");
         exit(-1);
     }
-    fread(&globalVarZahl, 1, sizeof(int), binFile); // die naechste 4 bits lesen (globalvariablen-zahl bestimmen)
-    staticDataArea = malloc(globalVarZahl * 4);     // SDA allocieren
-    if (staticDataArea == NULL)
+    fread(&globalVarZahl, 1, sizeof(int), binFile);            // die naechste 4 bits lesen (globalvariablen-zahl bestimmen)
+    staticDataArea = malloc(globalVarZahl * (sizeof(ObjRef))); // SDA allocieren
+    if (staticDataArea == NULL)                                // ueberpruefen ob die SDA erfolgreich Memory bekommen hat
     {
         printf("Problem beim SDA-Speicher allocating !!!\n");
         exit(-1);
     }
-    fread(programmSpeicher, instrZahl, sizeof(int), binFile); // die restliche bits in programspeicher lesen
-    framePointer = 0;
+    fread(programmSpeicher, instrZahl, sizeof(int), binFile); // die restliche bits (Instruktionen) in programspeicher lesen
+    // stackPointer, programmCounter, framePointer alle auf 0 setzen
     stackPointer = 0;
     programmCounter = 0;
+    framePointer = 0;
 }
 
 // Der geoeffnete File schliessen
 void binFileSchliessen(void)
 {
     int pruefen;
+    free(programmSpeicher); // die benutzte Memory für programmSpeicher freilassen
+    free(staticDataArea);   // die benutzte Memory für SDA freilassen
     pruefen = fclose(binFile);
     if (pruefen == 0) // File-Schliessung ist erfoelgt
     {
         printf("Ninja Virtual Machine stopped\n");
         exit(0);
     }
-    else
+    else // es gab Probleme beim Schliessen
     {
         printf("Problem beim File schliessen\n");
         exit(-1);
+    }
+}
+// Wert in dem nachsten freien Platz auf dem Stack speichern
+void push(int wert, bool isObject)
+{
+    if (stackPointer > STACKSIZE) // Der Stack ist voll, keine Werte können mehr drin gespeichert werden
+    {
+        printf("STACKUEBERLAUF !!!\n");
+        exit(-1);
+    }
+    else
+    {
+        if (isObject)
+        {
+            stack[stackPointer].isObjRef = true;
+            *(int *)stack[stackPointer].u.ObjRef = wert;
+            stackPointer = stackPointer + 1; // Stackpointer zeigt auf dem naechsten freien Platz
+        }
+        else
+        {
+            stack[stackPointer].isObjRef = false;
+            stack[stackPointer].u.number = wert;
+            stackPointer = stackPointer + 1; // Stackpointer zeigt auf dem naechsten freien Platz
+        }
+    }
+}
+
+// Der Wert aus dem Stack nehemen
+int pop(void)
+{
+    if (stackPointer < 0) // es gibt keine Werte mehr im Stack
+    {
+        printf("STACKUNTERLAUF !!!\n");
+        exit(-1);
+    }
+    else
+    {
+        int wert;
+        stackPointer = stackPointer - 1; // Stackpointer zeigt  auf dem letzt gespeicherten Wert
+        if (stack[stackPointer].isObjRef)
+        {
+            wert = *(int *)stack[stackPointer].u.ObjRef; // Der Wert nehmen
+        }
+        else
+        {
+            wert = stack[stackPointer].u.number; // Der Wert nehmen
+        }
+        return wert;
     }
 }
 
 // Debugger
 void debugger(void)
 {
-    stackPointer = 0;    // SP auf 0 setzen
-    framePointer = 0;    // FP auf 0 setzen
-    programmCounter = 0; // PC auf 0 setzen
     int breakPoint = -1;
-    printf("DEBUG: file 'prog1_2.bin' loaded (code size = %d, data size = %d)\n", instrZahl, globalVarZahl);
+    printf("DEBUG: file '%s' loaded (code size = %d, data size = %d)\n", fileName, instrZahl, globalVarZahl);
     printf("Ninja Virtual Machine started\n");
-    listen(programmSpeicher);
+    instruction = programmSpeicher[programmCounter]; // die zu ausführen inrtuction speichern
+    listen(instruction);                             // die zu ausführen Schritt von dem Programm drucken
     char debugInput[10];
     int prevPC;
     while (1)
     {
         printf("DEBUG: inspect, list, breakpoint, step, run, quit?\n");
         scanf("%s", debugInput);              // Entscheidungs-Wahl
-        if (strncmp(debugInput, "i", 1) == 0) // ispectieren der Stack oder SDA und sehen was dadrin steht
+        if (strncmp(debugInput, "i", 1) == 0) // der Stack oder SDA ispectieren und die gespeicherte Daten dadrin lesen
         {
-            printf("inspect: stack, data?\n");
+            printf("inspect: stack, data oder object?\n");
             scanf("%s", debugInput);
-            if (strncmp(debugInput, "s", 1) == 0) // stack
+            if (strncmp(debugInput, "s", 1) == 0) // stack ist beim User gewählt
             {
                 int durchStack;
                 // Schleife, um durch den Stack zu laufen, aber von oben nach unten(ruckwaerts)
@@ -102,19 +161,33 @@ void debugger(void)
                 {
                     if (durchStack == stackPointer && durchStack == framePointer) // wenn  die SP und FP auf dem glecihen Platz auf dem Stack zeigen
                     {
-                        printf("sp,fp\t-->\t\t %04d \t\t xxxx\n", durchStack);
+                        printf("sp,fp\t-->\t\t %04d (xxxxxx)\t\t xxxxxx\n", durchStack);
                     }
                     else if (durchStack == stackPointer) // wo der SP ist (nachste freie platz im Stack)
                     {
-                        printf("sp   \t-->\t\t %04d \t\t xxxx\n", durchStack);
+                        printf("sp   \t-->\t\t %04d (xxxxxx)\t\t xxxxxx\n", durchStack);
                     }
                     else if (durchStack == framePointer) // wo der gewahlte frame ist
                     {
-                        printf("fp   \t-->\t\t %04d \t\t %d  \n", durchStack, stack[durchStack]);
+                        if (stack[stackPointer].isObjRef)
+                        {
+                            printf("fp   \t-->\t\t %04d (objref)\t\t %ls  \n", durchStack, stack[durchStack].u.ObjRef);
+                        }
+                        else
+                        {
+                            printf("fp   \t-->\t\t %04d (number)\t\t %d  \n", durchStack, stack[durchStack].u.number);
+                        }
                     }
                     else // alle andere platze im Stack zeigen und die gespeicherte werte drin
                     {
-                        printf("               \t\t %04d \t\t %d  \n", durchStack, stack[durchStack]);
+                        if (stack[stackPointer].isObjRef)
+                        {
+                            printf("               \t\t %04d (objref))\t\t %ls  \n", durchStack, stack[durchStack].u.ObjRef);
+                        }
+                        else
+                        {
+                            printf("               \t\t %04d (number)\t\t %d  \n", durchStack, stack[durchStack].u.number);
+                        }
                     }
                 }
                 printf("\t\t\t   ---Bottom of Stack---   \t\t\t\n");
@@ -128,7 +201,14 @@ void debugger(void)
                 }
                 printf("\t\t\t   ---End of Data---   \t\t\t\n");
             }
-            listen(programmSpeicher);
+            else if (strncmp(debugInput, "o", 1) == 0) // object wert sehen
+            {
+                ObjRef reference;
+                printf("object reference?\n");
+                scanf("%p", (void **)&reference);
+            }
+            instruction = programmSpeicher[programmCounter]; // die zu nächst ausführen inrtuction speichern
+            listen(instruction);                             // die zu ausführen Schritt von dem Programm drucken
         }
         else if (strncmp(debugInput, "l", 1) == 0) // INstruktionen listen
         {
@@ -136,17 +216,19 @@ void debugger(void)
             programmCounter = 0;      // PC auf 0 setzen um durch den BinFile Instruktionen durchzugehen un es listen
             for (int i = 0; i < instrZahl; i++)
             {
-                listen(programmSpeicher);
-                programmCounter++;
+                instruction = programmSpeicher[programmCounter]; // die zu ausführen inrtuction speichern
+                programmCounter++;                               // PC erhöhen
+                listen(instruction);                             // die zu ausführen Schritt von dem Programm drucken
             }
             printf("\t\t\t   ---End of Code---   \t\t\t\n");
-            programmCounter = prevPC; // den PC zuruck setzen auf was er war
-            listen(programmSpeicher);
+            programmCounter = prevPC;                        // den PC zuruck setzen auf was er war
+            instruction = programmSpeicher[programmCounter]; // die zu nächst ausführen inrtuction speichern
+            listen(instruction);
         }
         else if (strncmp(debugInput, "b", 1) == 0) // breakpoint setzen
         {
             int breakWert;
-            if (breakPoint == -1)
+            if (breakPoint == -1) // wenn die breakpoint nicht gesetzt ist
             {
                 printf("DEBUG [breakpoint}: Cleared\n");
             }
@@ -166,14 +248,16 @@ void debugger(void)
                 breakPoint = breakWert; // breakpoint gesetzt
                 printf("DEBUG [breakpoint}: now set at %d\n", breakPoint);
             }
-            listen(programmSpeicher);
+            instruction = programmSpeicher[programmCounter]; // die zu nächst ausführen inrtuction speichern
+            listen(instruction);
         }
         else if (strncmp(debugInput, "s", 1) == 0) // step
         {
-            // eine Instruktion ausfuehren
-            ausfuehrung(programmSpeicher);
+            instruction = programmSpeicher[programmCounter]; // die zu ausführen inrtuction speichern
             programmCounter++;
-            listen(programmSpeicher);
+            ausfuehrung(instruction);                        // eine Instruktion ausfuehren
+            instruction = programmSpeicher[programmCounter]; // die zu nächst ausführen inrtuction speichern
+            listen(instruction);                             // die nächste zur Ausfuehrung-Instruktion listen
         }
         else if (strncmp(debugInput, "r", 1) == 0) // run
         {
@@ -181,68 +265,40 @@ void debugger(void)
             {
                 if (breakPoint > 0) // uberprufen ob eine breakpoint gesetzt ist
                 {
-                    ausfuehrung(programmSpeicher);
+                    instruction = programmSpeicher[programmCounter]; // die zu ausführen inrtuction speichern
                     programmCounter++;
+                    ausfuehrung(instruction);              // eine Instruktion ausfuehren
                     if (breakPoint - 1 == programmCounter) // wenn die gewunschte breakpoint platz erreicht ist dann abbrechen
                     {
-                        ausfuehrung(programmSpeicher);
+                        instruction = programmSpeicher[programmCounter]; // die zu ausführen inrtuction speichern
                         programmCounter++;
-                        listen(programmSpeicher);
+                        ausfuehrung(instruction);                        // eine Instruktion ausfuehren
+                        instruction = programmSpeicher[programmCounter]; // die zu ausführen inrtuction speichern
+                        listen(instruction);                             // die nächste zur Ausfuehrung-Instruktion listen
                         break;
                     }
                 }
-                else
+                else // ausführen ohne anzuhalten
                 {
-                    ausfuehrung(programmSpeicher);
+                    instruction = programmSpeicher[programmCounter]; // die zu ausführen inrtuction speichern
                     programmCounter++;
+                    ausfuehrung(instruction); // den Instruktion ausfuehren
                 }
             }
         }
         else if (strncmp(debugInput, "q", 1) == 0) //quit
         {
-            binFileSchliessen(); // debugger verlassen
+            binFileSchliessen(); // File schlissen und damit wird die njvm beendet
         }
     }
 }
 
-// Wert in dem nachsten freien Platz auf dem Stack speichern
-void push(int wert)
-{
-    if (stackPointer > STACKSIZE)
-    {
-        printf("STACKUEBERLAUF !!!\n");
-        exit(-1);
-    }
-    else
-    {
-        stack[stackPointer] = wert;      // Der Wert in dem freien Platz speichern
-        stackPointer = stackPointer + 1; // Stackpointer zeigt auf dem naechsten freien Platz
-    }
-}
-
-// Der Wert aus dem Stack nehemen
-int pop(void)
-{
-    if (stackPointer < 0)
-    {
-        printf("STACKUNTERLAUF !!!\n");
-        exit(-1);
-    }
-    else
-    {
-        stackPointer = stackPointer - 1; // Stackpointer zeigt  auf dem letzt gespeicherten Wert
-        int wert = stack[stackPointer];  // Der Wert nehmen
-        stack[stackPointer] = 0;         // Der Wert zuruecksetzen
-        return wert;
-    }
-}
-
 // Der Program listen und ausgeben
-void listen(unsigned int programSpeicher[])
+void listen(int instruktion)
 {
-    instruction = programSpeicher[programmCounter];                           // Die naechste Instruktion in dem Program lesen
-    opcode = instruction >> 24;                                               // Der Opcode durch rechts schieben Operator kriegen, weil er in dem 8 Oebersten Bits stehet
-    immediateWert = SIGN_EXTEND(IMMEDIATE(programSpeicher[programmCounter])); // Der Wert, der gepusht werden soll. sigh_extend ist benutzt im falle von negativen Zahlen
+
+    opcode = instruktion >> 24;                          // Der Opcode durch rechts schieben Operator kriegen, weil er in dem 8 Oebersten Bits stehet
+    immediateWert = SIGN_EXTEND(IMMEDIATE(instruktion)); // Der Wert, der gepusht werden soll. sigh_extend ist benutzt im falle von negativen Zahlen
     if (opcode == halt)
     {
         printf("%04d\t halt\n", programmCounter);
@@ -374,17 +430,17 @@ void listen(unsigned int programSpeicher[])
 }
 
 // Die Program-Instruktionen ausfuehren und das Ergebnis rechnen
-void ausfuehrung(unsigned int programSpeicher[])
+void ausfuehrung(int instruktion)
 {
     int wert1, wert2, ergebnis;
 
     // Das Gleiche wie Methode 'listen'
-    instruction = programSpeicher[programmCounter];
-    opcode = instruction >> 24;
-    immediateWert = SIGN_EXTEND(IMMEDIATE(programSpeicher[programmCounter]));
+
+    opcode = instruktion >> 24;
+    immediateWert = SIGN_EXTEND(IMMEDIATE(instruktion));
     if (opcode == halt)
     {
-        binFileSchliessen();
+        binFileSchliessen(); // Der File schliessen und die njvm beenden
     }
     else if (opcode == pushc)
     {
@@ -439,18 +495,18 @@ void ausfuehrung(unsigned int programSpeicher[])
     else if (opcode == rdint)
     {
         int input;
-        scanf("%d", &input); // Integer von stdin lesen
-        push(input);         // Der Wert pushen
+        scanf("%d", &input); // Integer von stdin lesen (User-Input)
+        push(input);         // Der gelesene Wert pushen
     }
     else if (opcode == wrint)
     {
         wert1 = pop();
-        printf("%d", wert1); // Wert aus dem Stack nehmen, und auf stdout ausgeben
+        printf("%d", wert1); // Wert aus dem Stack nehmen, und auf dem Bildschirm (Terminal) ausgeben
     }
     else if (opcode == rdchr)
     {
         int input;
-        input = getchar(); // nur erste Character vom was der Benutzer schreibt in input speichern
+        input = getchar(); // nur erste Character vom, was der Benutzer schreibt, speichern
         push(input);
     }
     else if (opcode == wrchr)
@@ -462,7 +518,7 @@ void ausfuehrung(unsigned int programSpeicher[])
     }
     else if (opcode == pushg) // Mit hilfe von Global-VAriablen in SDA arbeiten:
     {
-        wert1 = staticDataArea[immediateWert]; // wer aus dem SDA holen
+        wert1 = staticDataArea[immediateWert]; // wert aus dem SDA (gewünschten Platz) holen
         push(wert1);                           // der Wert auf dem Stack pushen
     }
     else if (opcode == popg) // Mit hilfe von Global-VAriablen in SDA arbeiten:
@@ -472,20 +528,20 @@ void ausfuehrung(unsigned int programSpeicher[])
     }
     else if (opcode == asf) // allocating Stack-Frame:
     {
-        push(framePointer);
-        framePointer = stackPointer;
-        stackPointer = stackPointer + immediateWert;
+        push(framePointer);                          // der jetztige framePointer in dem Stack speichern
+        framePointer = stackPointer;                 // framePointer auf dem Stackpointer-Position legen
+        stackPointer = stackPointer + immediateWert; // Stackpointer setzen auf wie viele Plätze,die von dem Programm gelesen werden, plus den Platz der Stackpointer
     }
     else if (opcode == rsf) // reset Stack-Frame
     {
-        stackPointer = framePointer;
-        framePointer = pop();
+        stackPointer = framePointer; // der Stackpointer zurücksetzen, wo er früher war (das ist der Framepointer platz jetzt)
+        framePointer = pop();        // der altere Wert der Framepointer aus dem Stack nehmen
     }
-    else if (opcode == pushl) // Mit hilfe von aloocated Stack-Frame arbeiten:
+    else if (opcode == pushl) // Mit hilfe von die bereits allocated Stack-Frame arbeiten:
     {
         int gewunPos;
         gewunPos = framePointer + immediateWert; // gewunschte Position ereichen
-        wert1 = stack[gewunPos];                 // der Wert aus dem Stack-Fframe nehmen
+        wert1 = stack[gewunPos];                 // der Wert aus dem Stack-Frame nehmen
         push(wert1);                             // auf dem Stack pushen
     }
     else if (opcode == popl) // Mit hilfe von aloocated Stack-Frame arbeiten:
@@ -493,7 +549,7 @@ void ausfuehrung(unsigned int programSpeicher[])
         int gewunPos;
         gewunPos = framePointer + immediateWert; // gewunschte Position ereichen
         wert1 = pop();                           // der Wert von dem Stack nehmen
-        stack[gewunPos] = wert1;                 // der Wert in dem gewunschten Platz im Stack-Frame
+        stack[gewunPos] = wert1;                 // der Wert in dem gewunschten Platz im Stack-Frame speichern
     }
     else if (opcode == eq) // die 2 Werte sind gleich
     {
@@ -545,14 +601,14 @@ void ausfuehrung(unsigned int programSpeicher[])
     }
     else if (opcode == jmp) // springen zum gewahlten PLatz in Intsruktionen-Liste
     {
-        programmCounter = immediateWert - 1;
+        programmCounter = immediateWert; // der Programmcounter auf dem Wert der von dem Programm gelesen wird setzen
     }
     else if (opcode == brf) // springen zum gewahlten PLatz in Intsruktionen-Liste falls der wert gleich 0 ist(das geht durch die gleichheit Instruktionen)
     {
         wert1 = pop();
         if (wert1 == 0)
         {
-            programmCounter = immediateWert - 1;
+            programmCounter = immediateWert; // der Programmcounter auf dem Wert der von dem Programm gelesen wird setzen
         }
         else
         {
@@ -563,7 +619,7 @@ void ausfuehrung(unsigned int programSpeicher[])
         wert1 = pop();
         if (wert1 == 1)
         {
-            programmCounter = immediateWert - 1;
+            programmCounter = immediateWert; // der Programmcounter auf dem Wert der von dem Programm gelesen wird setzen
         }
         else
         {
@@ -571,17 +627,17 @@ void ausfuehrung(unsigned int programSpeicher[])
     }
     else if (opcode == call) // pushen der nachste Instruktions PLatz und springen zu der gewahlten Instruktion
     {
-        push(programmCounter + 1);
-        programmCounter = immediateWert - 1;
+        push(programmCounter);           // der Programmcounter auf dem Stack pushen um es später nochmal zu haben
+        programmCounter = immediateWert; // der Programmcounter auf dem Wert der von dem Programm gelesen wird setzen
     }
     else if (opcode == ret) // popen der Wert vom Stack und es im Programmcounter speichern
     {
         wert1 = pop();
-        programmCounter = wert1 - 1;
+        programmCounter = wert1; // der Programmcounter auf dem Wert der von dem Stack gepopt wird setzen, der soll das gleiche sein der beim "call" gepusht ist
     }
     else if (opcode == drop) // n Werte vom Stack popen
     {
-        for (int i = 0; i < immediateWert; i++)
+        for (int i = 0; i < immediateWert; i++) // n-mal werte aus dem Stack popen (n = Der wert der von dem Programm gelesen wird)
         {
             pop();
         }
@@ -590,7 +646,7 @@ void ausfuehrung(unsigned int programSpeicher[])
     {
         push(valueRegister);
     }
-    else if (opcode == popr) // der gepopten WErt im Return Value Register speichern
+    else if (opcode == popr) // der aus dem Stack gepopten Wert im Return Value Register speichern
     {
         valueRegister = pop();
     }
@@ -601,7 +657,6 @@ void ausfuehrung(unsigned int programSpeicher[])
         push(wert2);
     }
 }
-
 // Main-Methode
 int main(int argc, char *argv[])
 {
@@ -635,11 +690,13 @@ int main(int argc, char *argv[])
                 }
                 if (j == 2) // wenn --debug als zweite parameter ist
                 {
-                    binFileOffnen(argv[1]);
+                    fileName = argv[1];
+                    binFileOffnen(fileName);
                 }
                 else if (j == 1) // wenn --debug als erste parameter ist
                 {
-                    binFileOffnen(argv[2]);
+                    fileName = argv[2];
+                    binFileOffnen(fileName);
                 }
                 debugger();
             }
@@ -655,16 +712,13 @@ int main(int argc, char *argv[])
         }
         else
         {
-
-            stackPointer = 0;    // SP auf 0 setzen
-            framePointer = 0;    // FP auf 0 setzen
-            programmCounter = 0; // PC auf 0 setzen
-            binFileOffnen(argv[1]);
+            binFileOffnen(argv[1]); // der als parameter gegebene Programm öffnen
             printf("Ninja Virtual Machine started\n");
             while (1)
             {
-                ausfuehrung(programmSpeicher);
+                instruction = programmSpeicher[programmCounter];
                 programmCounter++;
+                ausfuehrung(instruction);
             }
         }
     }

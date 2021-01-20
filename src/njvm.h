@@ -1,6 +1,11 @@
-#ifndef njvm3
-#define njvm3
-#define version 3
+#ifndef _NJVM_H
+#define _NJVM_H
+#include <stdio.h>
+#include <time.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
 #define halt 0
 #define pushc 1
 #define add 2
@@ -27,16 +32,23 @@
 #define jmp 23
 #define brf 24
 #define brt 25
+#define call 26
+#define ret 27
+#define drop 28
+#define pushr 29
+#define popr 30
+#define dup 31
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i)&0x00800000 ? (i) | 0xFF000000 : (i))
 #define STACKSIZE 10000
+#define version 5
 
-void push(int wert);
-int pop();
-void listen(unsigned int programSpeicher[]);
-void ausfuehrung(unsigned int programSpeicher[]);
+void push(int wert, bool isObject);
+int pop(void);
+void binFileSchliessen(void);
+void listen(int instruktion);
+void ausfuehrung(int instruktion);
 void binFileOffnen(char *file);
-void binFileSchliessen();
-void debugger();
+void debugger(void);
 
 #endif
