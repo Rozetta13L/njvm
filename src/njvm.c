@@ -151,7 +151,7 @@ void debugger(void)
         scanf("%s", debugInput);              // Entscheidungs-Wahl
         if (strncmp(debugInput, "i", 1) == 0) // der Stack oder SDA ispectieren und die gespeicherte Daten dadrin lesen
         {
-            printf("inspect: stack, data?\n");
+            printf("inspect: stack, data oder object?\n");
             scanf("%s", debugInput);
             if (strncmp(debugInput, "s", 1) == 0) // stack ist beim User gewählt
             {
@@ -161,32 +161,32 @@ void debugger(void)
                 {
                     if (durchStack == stackPointer && durchStack == framePointer) // wenn  die SP und FP auf dem glecihen Platz auf dem Stack zeigen
                     {
-                        printf("sp,fp\t-->\t\t %04d \t\t xxxx\n", durchStack);
+                        printf("sp,fp\t-->\t\t %04d (xxxxxx)\t\t xxxxxx\n", durchStack);
                     }
                     else if (durchStack == stackPointer) // wo der SP ist (nachste freie platz im Stack)
                     {
-                        printf("sp   \t-->\t\t %04d \t\t xxxx\n", durchStack);
+                        printf("sp   \t-->\t\t %04d (xxxxxx)\t\t xxxxxx\n", durchStack);
                     }
                     else if (durchStack == framePointer) // wo der gewahlte frame ist
                     {
                         if (stack[stackPointer].isObjRef)
                         {
-                            printf("fp   \t-->\t\t %04d ObjRef\t\t %ls  \n", durchStack, stack[durchStack].u.ObjRef);
+                            printf("fp   \t-->\t\t %04d (objref)\t\t %ls  \n", durchStack, stack[durchStack].u.ObjRef);
                         }
                         else
                         {
-                            printf("fp   \t-->\t\t %04d Number\t\t %d  \n", durchStack, stack[durchStack].u.number);
+                            printf("fp   \t-->\t\t %04d (number)\t\t %d  \n", durchStack, stack[durchStack].u.number);
                         }
                     }
                     else // alle andere platze im Stack zeigen und die gespeicherte werte drin
                     {
                         if (stack[stackPointer].isObjRef)
                         {
-                            printf("               \t\t %04d ObjRef\t\t %ls  \n", durchStack, stack[durchStack].u.ObjRef);
+                            printf("               \t\t %04d (objref))\t\t %ls  \n", durchStack, stack[durchStack].u.ObjRef);
                         }
                         else
                         {
-                            printf("               \t\t %04d Number\t\t %d  \n", durchStack, stack[durchStack].u.number);
+                            printf("               \t\t %04d (number)\t\t %d  \n", durchStack, stack[durchStack].u.number);
                         }
                     }
                 }
@@ -200,6 +200,12 @@ void debugger(void)
                     printf("data[%04d]:\t\t %d\n", count, staticDataArea[count]);
                 }
                 printf("\t\t\t   ---End of Data---   \t\t\t\n");
+            }
+            else if (strncmp(debugInput, "o", 1) == 0) // object wert sehen
+            {
+                ObjRef reference;
+                printf("object reference?\n");
+                scanf("%p", (void **)&reference);
             }
             instruction = programmSpeicher[programmCounter]; // die zu nächst ausführen inrtuction speichern
             listen(instruction);                             // die zu ausführen Schritt von dem Programm drucken
