@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include "bigint/build/include/support.h"
 
 #define halt 0
 #define pushc 1
@@ -38,13 +39,31 @@
 #define pushr 29
 #define popr 30
 #define dup 31
+#define new 32
+#define getf 33
+#define putf 34
+#define newa 35
+#define getfa 36
+#define putfa 37
+#define getsz 38
+#define pushn 39
+#define refeq 40
+#define refne 41
+
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i)&0x00800000 ? (i) | 0xFF000000 : (i))
-#define STACKSIZE 10000
-#define version 5
+#define MSB (1 << (8 * sizeof(unsigned int) - 1))
+#define IS_PRIMITIVE(objRef) (((objRef)->size & MSB) == 0)
+#define GET_ELEMENT_COUNT(objRef) ((objRef)->size & ~MSB)
+#define GET_REFS_PTR(objRef) ((ObjRef *)(objRef)->data)
+#define STACKSIZE 65536 //64 KiB
+#define version 7
 
-void push(int wert, bool isObject);
+void push(int wert);
+void pushObj(ObjRef obj);
 int pop(void);
+ObjRef popObj(void);
+ObjRef newCmpObj(int dataSize);
 void binFileSchliessen(void);
 void listen(int instruktion);
 void ausfuehrung(int instruktion);
