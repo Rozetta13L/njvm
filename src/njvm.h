@@ -57,7 +57,7 @@
 #define GET_ELEMENT_COUNT(objRef) ((objRef)->size & ~MSB)
 #define GET_REFS_PTR(objRef) ((ObjRef *)(objRef)->data)
 #define STACKSIZE 65536 //64 KiB
-#define version 7
+#define version 8
 
 void push(int wert);
 void pushObj(ObjRef obj);

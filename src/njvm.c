@@ -1000,3 +1000,9 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+
+void fatalError(char *msg)
+{
+    printf("%s\n", msg);
+    exit(-1);
+}

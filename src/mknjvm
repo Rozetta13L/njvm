@@ -12,8 +12,5 @@
 # The following line is an example for 
 echo gcc -g -Wall -std=c99 -pedantic -I./bigint/build/include -L./bigint/build/lib njvm.c -l bigint -o njvm
 
-(cd bigint/src ;
- gcc -g -Wall -std=c89 -pedantic -o bigint.o -c bigint.c ;
- ar -crs libbigint.a bigint.o)
 gcc -g -Wall -std=c99 -pedantic -I./bigint/build/include -L./bigint/build/lib njvm.c -lbigint -o njvm
 
