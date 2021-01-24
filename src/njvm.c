@@ -23,7 +23,7 @@ typedef struct
 ObjRef valueRegister;
 ObjRef *staticDataArea;
 StackSlot stack[STACKSIZE];
-
+void *heap;
 // Versuchen zu offnen der File der im Kommandozeile gegeben wird
 void binFileOffnen(char *file)
 {
