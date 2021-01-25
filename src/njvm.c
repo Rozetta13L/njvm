@@ -9,6 +9,7 @@ unsigned int globalVarZahl, instrZahl;
 int framePointer, stackPointer, programmCounter = 0;
 FILE *binFile;
 unsigned int *programmSpeicher;
+bool debugFlag;
 
 typedef struct
 {
@@ -962,9 +963,11 @@ int main(int argc, char *argv[])
 {
     if (argc > 1)
     {
-        int i, j;
+        int i, fileCount;
+        fileCount = 0;
         for (i = 1; i < argc; i++)
         {
+
             if (strcmp(argv[i], "--help") == 0) // Hilfe ausdrucken (wie die VM funktioniert bzw- benutzt werden soll)
             {
                 printf("usage: ./njvm [options] <code file>\n");
@@ -980,61 +983,55 @@ int main(int argc, char *argv[])
             }
             else if (strcmp(argv[i], "--stack") == 0) // VM-Version ausdrucken und wann ist die compiliert war
             {
-                printf("--stack");
-                exit(0);
+                i++;
+                printf("--stack\n");
             }
             else if (strcmp(argv[i], "--heap") == 0) // VM-Version ausdrucken und wann ist die compiliert war
             {
-                printf("--heap");
-                exit(0);
+                i++;
+                printf("--heap\n");
             }
-        }
-        for (j = 1; j < argc; j++)
-        {
-            if (strcmp(argv[j], "--debug") == 0) // debugger starten
+            else if (strcmp(argv[i], "--debug") == 0) // debugger starten
             {
-                if (argc > 3) // wenn mehr als ein file als parameter gegeben ist
-                {
-                    printf("Error: more than one code file specified\n");
-                    exit(0);
-                }
-                if (j == 2) // wenn --debug als zweite parameter ist
-                {
-                    fileName = argv[1];
-                    binFileOffnen(fileName);
-                }
-                else if (j == 1) // wenn --debug als erste parameter ist
-                {
-                    fileName = argv[2];
-                    binFileOffnen(fileName);
-                }
-                debugger();
+                debugFlag = true;
             }
-            else if ((strncmp(argv[j], "--", 2) == 0) || (strncmp(argv[j], "--", 1) == 0)) // ueberpruefen ob ein unbekanntes Befehl gegeben wird
+            else if ((strncmp(argv[i], "--", 2) == 0) || (strncmp(argv[i], "--", 1) == 0)) // ueberpruefen ob ein unbekanntes Befehl gegeben wird
             {
                 printf("unknown command line argument '%s', try './njvm --help'\n", argv[i]);
                 exit(-1);
             }
-        }
-        if (argc > 2)
-        {
-            printf("Error: more than one code file specified\n");
-        }
-        else
-        {
-            binFileOffnen(argv[1]); // der als parameter gegebene Programm öffnen
-            printf("Ninja Virtual Machine started\n");
-            while (1)
+            else
             {
-                instruction = programmSpeicher[programmCounter];
-                programmCounter++;
-                ausfuehrung(instruction);
+                fileCount = fileCount + 1;
+                if (fileCount > 1)
+                {
+                    printf("Error: more than one code file specified\n");
+                    exit(-1);
+                }
+
+                fileName = argv[i];
             }
         }
     }
     else
     {
         printf("Error: no code file specified\n");
+    }
+    if (debugFlag)
+    {
+        binFileOffnen(fileName);
+        debugger();
+    }
+    else
+    {
+        binFileOffnen(fileName); // der als parameter gegebene Programm öffnen
+        printf("Ninja Virtual Machine started\n");
+        while (1)
+        {
+            instruction = programmSpeicher[programmCounter];
+            programmCounter++;
+            ausfuehrung(instruction);
+        }
     }
 
     return 0;
