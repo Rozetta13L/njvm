@@ -253,9 +253,33 @@ void debugger(void)
             }
             else if (strncmp(debugInput, "o", 1) == 0) // object wert sehen
             {
+                int value;
                 ObjRef reference;
                 printf("object reference?\n");
                 scanf("%p", (void **)&reference);
+                if (IS_PRIMITIVE(reference))
+                {
+                    printf("< Primitiv Object >\n");
+                    bip.op1 = reference;
+                    value = bigToInt();
+                    printf("Value =\t %d\n", value);
+                    printf("\t\t--- End of Object ---\t\t\n");
+                }
+                else if (reference == NULL)
+                {
+                    printf("kein Object (nil)\n");
+                }
+                else
+                {
+                    printf("< Compound Object >\n");
+                    int size;
+                    size = GET_ELEMENT_COUNT(reference);
+                    for (int i = 0; i < size; i++)
+                    {
+                        printf("field[%04d]:\t(objref)  %p\n", i, (void *)GET_REFS_PTR(reference)[i]);
+                    }
+                    printf("\t\t--- End of Object ---\t\t\n");
+                }
             }
             instruction = programmSpeicher[programmCounter]; // die zu nächst ausführen inrtuction speichern
             listen(instruction);                             // die zu ausführen Schritt von dem Programm drucken
