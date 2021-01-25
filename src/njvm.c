@@ -61,6 +61,11 @@ void binFileOffnen(char *file)
         printf("Problem beim SDA-Speicher allocating !!!\n");
         exit(-1);
     }
+    for (int i = 0; i < globalVarZahl; i++)
+    {
+        staticDataArea[i] = NULL;
+    }
+
     fread(programmSpeicher, instrZahl, sizeof(int), binFile); // die restliche bits (Instruktionen) in programspeicher lesen
     // stackPointer, programmCounter, framePointer alle auf 0 setzen
     stackPointer = 0;
@@ -174,7 +179,10 @@ ObjRef newCmpObj(int dataSize)
 void debugger(void)
 {
     int breakPoint = -1;
-    printf("DEBUG: file '%s' loaded (code size = %d, data size = %d)\n", fileName, instrZahl, globalVarZahl);
+    printf("DEBUG: file\t:\t'%s'\n", fileName);
+    printf("\t\t code\t:\t%d instructions\n", instrZahl);
+    printf("\t\t data\t:\t%d objects\n", globalVarZahl);
+    printf("\t\t stack\t:\t%d slots\n", STACKSIZE);
     printf("Ninja Virtual Machine started\n");
     instruction = programmSpeicher[programmCounter]; // die zu ausführen inrtuction speichern
     listen(instruction);                             // die zu ausführen Schritt von dem Programm drucken
@@ -204,7 +212,7 @@ void debugger(void)
                     }
                     else if (durchStack == framePointer) // wo der gewahlte frame ist
                     {
-                        if (stack[stackPointer].isObjRef)
+                        if (stack[durchStack].isObjRef)
                         {
                             printf("fp   \t-->\t\t %04d (objref)\t\t %p  \n", durchStack, (void *)stack[durchStack].u.ObjRef);
                         }
@@ -215,9 +223,9 @@ void debugger(void)
                     }
                     else // alle andere platze im Stack zeigen und die gespeicherte werte drin
                     {
-                        if (stack[stackPointer].isObjRef)
+                        if (stack[durchStack].isObjRef)
                         {
-                            printf("               \t\t %04d (objref))\t\t %p  \n", durchStack, (void *)stack[durchStack].u.ObjRef);
+                            printf("               \t\t %04d (objref)\t\t %p  \n", durchStack, (void *)stack[durchStack].u.ObjRef);
                         }
                         else
                         {
@@ -232,7 +240,14 @@ void debugger(void)
                 int count;
                 for (count = 0; count < globalVarZahl; count++) // SDA schleife fur zeigen mit den Werte drin
                 {
-                    printf("data[%04d]:\t\t %p\n", count, (void *)staticDataArea[count]->data);
+                    if (staticDataArea[count] == NULL)
+                    {
+                        printf("data[%04d]:\t (objref)\t nil\n", count);
+                    }
+                    else
+                    {
+                        printf("data[%04d]:\t (objref)\t %p\n", count, (void *)staticDataArea[count]->data);
+                    }
                 }
                 printf("\t\t\t   ---End of Data---   \t\t\t\n");
             }
@@ -947,6 +962,16 @@ int main(int argc, char *argv[])
             else if (strcmp(argv[i], "--version") == 0) // VM-Version ausdrucken und wann ist die compiliert war
             {
                 printf("Ninja Virtual Machine Version %d (compiled Oct 14 2020, 22:54:23)\n", version);
+                exit(0);
+            }
+            else if (strcmp(argv[i], "--stack") == 0) // VM-Version ausdrucken und wann ist die compiliert war
+            {
+                printf("--stack");
+                exit(0);
+            }
+            else if (strcmp(argv[i], "--heap") == 0) // VM-Version ausdrucken und wann ist die compiliert war
+            {
+                printf("--heap");
                 exit(0);
             }
         }
