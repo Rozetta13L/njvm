@@ -757,20 +757,10 @@ void ausfuehrung(int instruktion)
     }
     else if (opcode == dup) // der letzten Wert im Stack duplitizieren
     {
-        if (stack[stackPointer].isObjRef)
-        {
-            ObjRef objWert;
-            objWert = popObj();
-            pushObj(objWert);
-            pushObj(objWert);
-        }
-        else
-        {
-            int nWert;
-            nWert = pop();
-            push(nWert);
-            push(nWert);
-        }
+        ObjRef objWert;
+        objWert = popObj();
+        pushObj(objWert);
+        pushObj(objWert);
     }
     else if (opcode == new)
     {
