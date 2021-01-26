@@ -10,7 +10,9 @@ int framePointer, stackPointer, programmCounter = 0;
 FILE *binFile;
 unsigned int *programmSpeicher;
 bool debugFlag;
-
+void *heap;
+unsigned int stackSize = 64;
+unsigned int heapSize = 8192;
 typedef struct
 {
     bool isObjRef;
@@ -23,13 +25,14 @@ typedef struct
 } StackSlot;
 ObjRef valueRegister;
 ObjRef *staticDataArea;
-StackSlot stack[STACKSIZE];
-void *heap;
+StackSlot *stack;
+
 // Versuchen zu offnen der File der im Kommandozeile gegeben wird
 void binFileOffnen(char *file)
 {
     char formatIdentifier[4];
     unsigned int versionCheck;
+    // den File offnen und uberpruefen ob es erfolgreich geoffnet ist
     binFile = fopen(file, "r");
     if (binFile == NULL) //ueberpruefen ob der file erfolgreich geoefnnet wird
     {
@@ -60,14 +63,27 @@ void binFileOffnen(char *file)
     if (staticDataArea == NULL)                                // ueberpruefen ob die SDA erfolgreich Memory bekommen hat
     {
         printf("Problem beim SDA-Speicher allocating !!!\n");
-        exit(-1);
+        exit(1);
     }
+    // alle werte in SDA NULL setzen
     for (int i = 0; i < globalVarZahl; i++)
     {
         staticDataArea[i] = NULL;
     }
 
     fread(programmSpeicher, instrZahl, sizeof(int), binFile); // die restliche bits (Instruktionen) in programspeicher lesen
+    stack = malloc(stackSize * 1024);                         // stack size allocieren
+    if (stack == NULL)                                        // ueberpruefen ob die SDA erfolgreich Memory bekommen hat
+    {
+        printf("Problem beim Stack allocating !!!\n");
+        exit(1);
+    }
+    heap = malloc(heapSize * 1024); // heap size allocieren
+    if (heap == NULL)               // ueberpruefen ob die SDA erfolgreich Memory bekommen hat
+    {
+        printf("Problem beim Heap allocating !!!\n");
+        exit(1);
+    }
     // stackPointer, programmCounter, framePointer alle auf 0 setzen
     stackPointer = 0;
     programmCounter = 0;
@@ -92,29 +108,32 @@ void binFileSchliessen(void)
         exit(-1);
     }
 }
-// Wert in dem nachsten freien Platz auf dem Stack speichern
+
+// Wert in dem nachsten freien Platz auf dem Stack speichern, es ist kein Reference auf ein Object
 void push(int wert)
 {
-    if (stackPointer > STACKSIZE) // Der Stack ist voll, keine Werte können mehr drin gespeichert werden
+    if (stackPointer > (stackSize * stackSize)) // Der Stack ist voll, keine Werte können mehr drin gespeichert werden
     {
         printf("STACKUEBERLAUF !!!\n");
         exit(-1);
     }
     else
     {
-        stack[stackPointer].isObjRef = false;
-        stack[stackPointer].u.number = wert;
-        stackPointer = stackPointer + 1; // Stackpointer zeigt auf dem naechsten freien Platz
+        stack[stackPointer].isObjRef = false; // setze dass das Wert kein Reference auf ein Object ist
+        stack[stackPointer].u.number = wert;  // das Wert als int setzen
+        stackPointer = stackPointer + 1;      // Stackpointer zeigt auf dem naechsten freien Platz
     }
 }
 
+// Reference auf ein Object, der auf dem Heap steht
 void pushObj(ObjRef obj)
 {
-    stack[stackPointer].isObjRef = true;
-    stack[stackPointer].u.ObjRef = obj;
-    stackPointer = stackPointer + 1; // Stackpointer zeigt auf dem naechsten freien Platz
+    stack[stackPointer].isObjRef = true; // wert ist ein reference auf Object
+    stack[stackPointer].u.ObjRef = obj;  // der umgewandelte int zu big wert auf dem Stack
+    stackPointer = stackPointer + 1;     // Stackpointer zeigt auf dem naechsten freien Platz
 }
-// Der Wert aus dem Stack nehmen, kein ObjRef nur ein nummer
+
+// Der Wert aus dem Stack nehmen, ein int wert kein reference auf Object
 int pop(void)
 {
     if (stackPointer < 0) // es gibt keine Werte mehr im Stack
@@ -125,13 +144,13 @@ int pop(void)
     else
     {
         int wert;
-        stackPointer = stackPointer - 1;
-        wert = stack[stackPointer].u.number;
+        stackPointer = stackPointer - 1;     // stackpointer auf Top of Stack stellen
+        wert = stack[stackPointer].u.number; // der int wert aus dem Stack nehmen
         return wert;
     }
 }
 
-//Der Wert aus dem Stack nehmen, ein ObjRef
+//Der Wert aus dem Stack nehmen, ein ObjRef kein direct integer
 ObjRef popObj(void)
 {
     if (stackPointer < 0) // es gibt keine Werte mehr im Stack
@@ -141,34 +160,42 @@ ObjRef popObj(void)
     }
     else
     {
-        stackPointer = stackPointer - 1;
+        stackPointer = stackPointer - 1; // stackpointer auf Top of Stack legen
         return stack[stackPointer].u.ObjRef;
     }
 }
 
+// neues Primitive Object erzeugen ein Pointer auf int werte
 ObjRef newPrimObject(int dataSize)
 {
     ObjRef primObj;
-    unsigned int objSize = sizeof(unsigned int) + dataSize;
-    if ((primObj = malloc(objSize)) == NULL)
+    unsigned int objSize = sizeof(unsigned int) + dataSize; // der zu speichern Size berechnen (4 Byte für size und dataSize (als Parameter) hat wie viel Bytes fur data braucht)
+    if ((primObj = malloc(objSize)) == NULL)                // hier es allocieren
     {
-        printf("Problem beim allocieren\n");
+        printf("Problem beim newPrimObj allocieren\n");
         exit(-1);
     }
-    primObj->size = (unsigned int)dataSize;
+    primObj->size = (unsigned int)dataSize; // 4 Bytes setzen fur die size -> die restliche Bytes bleiben fur die
     return primObj;
 }
 
+// neues Compound Object erzeugen, ein Pointer auf ObjRefs
 ObjRef newCmpObj(int dataSize)
 {
     ObjRef cmpObj;
-    if ((cmpObj = malloc(sizeof(int) + (dataSize * sizeof(ObjRef)))) == NULL)
+    /*
+    Size fur der ObjRef der alle andere ObjRefs enhalt allocieren
+    4 Bytes int fur das size
+    und dann dataSize fur data allocieren und weil jeder data ein ObjRef ist dann multiplizieren es mit size von ObjRef
+    */
+    if ((cmpObj = malloc(sizeof(unsigned int) + (dataSize * sizeof(ObjRef)))) == NULL)
     {
-        printf("Problem beim allocieren\n");
+        printf("Problem beim newCmpObj allocieren\n");
         exit(-1);
     }
+    // der Size enhalt die anzahl wie viele Objekte drin gibt und die MSB (die hindeuted das es ein CmpObj ist)
     cmpObj->size = (unsigned int)(dataSize | MSB);
-    //alle werte in es als null zuerst initialisieren
+    //alle referencen in es als null zuerst initialisieren
     for (int i = 0; i < dataSize; i++)
     {
         GET_REFS_PTR(cmpObj)
@@ -181,9 +208,10 @@ void debugger(void)
 {
     int breakPoint = -1;
     printf("DEBUG: file\t:\t'%s'\n", fileName);
-    printf("\t\t code\t:\t%d instructions\n", instrZahl);
-    printf("\t\t data\t:\t%d objects\n", globalVarZahl);
-    printf("\t\t stack\t:\t%d slots\n", STACKSIZE);
+    printf("\t code\t:\t%d instructions\n", instrZahl);
+    printf("\t data\t:\t%d objects\n", globalVarZahl);
+    printf("\t stack\t:\t%d slots\n", stackSize * stackSize);
+    printf("\t heap\t:\t 2 *%d bytes\n", heapSize * 512);
     printf("Ninja Virtual Machine started\n");
     instruction = programmSpeicher[programmCounter]; // die zu ausführen inrtuction speichern
     listen(instruction);                             // die zu ausführen Schritt von dem Programm drucken
@@ -215,7 +243,7 @@ void debugger(void)
                     {
                         if (stack[durchStack].isObjRef)
                         {
-                            printf("fp   \t-->\t\t %04d (objref)\t\t %p  \n", durchStack, (void *)stack[durchStack].u.ObjRef);
+                            printf("fp   \t-->\t\t %04d (objref)\t\t %p  \n", durchStack, (void *)stack[durchStack].u.ObjRef); // die addresse zur void pointer umwandeln und es ausgeben
                         }
                         else
                         {
@@ -241,7 +269,7 @@ void debugger(void)
                 int count;
                 for (count = 0; count < globalVarZahl; count++) // SDA schleife fur zeigen mit den Werte drin
                 {
-                    if (staticDataArea[count] == NULL)
+                    if (staticDataArea[count] == NULL) //uberpruefen ob die werte in SDA NULL sind
                     {
                         printf("data[%04d]:\t (objref)\t nil\n", count);
                     }
@@ -252,17 +280,17 @@ void debugger(void)
                 }
                 printf("\t\t\t   ---End of Data---   \t\t\t\n");
             }
-            else if (strncmp(debugInput, "o", 1) == 0) // object wert sehen
+            else if (strncmp(debugInput, "o", 1) == 0) // objref wert sehen
             {
                 int value;
                 ObjRef reference;
                 printf("object reference?\n");
-                scanf("%p", (void **)&reference);
-                if (IS_PRIMITIVE(reference))
+                scanf("%p", (void **)&reference); // die address von User Eingabe lesen
+                if (IS_PRIMITIVE(reference))      // die reference ist ein Primitives Object
                 {
                     printf("< Primitiv Object >\n");
-                    bip.op1 = reference;
-                    value = bigToInt();
+                    bip.op1 = reference; //reference in bip.op1 weil es in bigToInt benutzt wird
+                    value = bigToInt();  //die umgewandelte ObjRef zu Int speichern
                     printf("Value =\t %d\n", value);
                     printf("\t\t--- End of Object ---\t\t\n");
                 }
@@ -274,7 +302,7 @@ void debugger(void)
                 {
                     printf("< Compound Object >\n");
                     int size;
-                    size = GET_ELEMENT_COUNT(reference);
+                    size = GET_ELEMENT_COUNT(reference); // wie viel referencen auf ObjRefs gibt es (Elemente)
                     for (int i = 0; i < size; i++)
                     {
                         printf("field[%04d]:\t(objref)  %p\n", i, (void *)GET_REFS_PTR(reference)[i]);
@@ -559,78 +587,78 @@ void ausfuehrung(int instruktion)
     }
     else if (opcode == pushc)
     {
-        bigFromInt(immediateWert);
-        pushObj(bip.res); // Wert auf dem Stack legen
+        bigFromInt(immediateWert); //von int zu big umwandeln, das umgewandelte WErt steht im bip.res
+        pushObj(bip.res);          // Wert auf dem Stack legen
     }
     else if (opcode == add)
     {
-        bip.op2 = popObj(); // letzte gepushte Wert nehmen
-        bip.op1 = popObj(); // vorletzte gepushte Wert nehmen
-        bigAdd();
+        bip.op2 = popObj(); // letzte gepushte Object nehmen
+        bip.op1 = popObj(); // vorletzte gepushte Object nehmen
+        bigAdd();           // beide Werte addieren, das Ergebnis ist in bip.res gespeichert
         pushObj(bip.res);
     }
     else if (opcode == sub)
-    {                       // wie add
-        bip.op2 = popObj(); // letzte gepushte Wert nehmen
-        bip.op1 = popObj(); // vorletzte gepushte Wert nehmen
+    { // wie add
+        bip.op2 = popObj();
+        bip.op1 = popObj();
         bigSub();
         pushObj(bip.res);
     }
     else if (opcode == mul)
-    {                       // wie add
-        bip.op2 = popObj(); // letzte gepushte Wert nehmen
-        bip.op1 = popObj(); // vorletzte gepushte Wert nehmen
+    { // wie add
+        bip.op2 = popObj();
+        bip.op1 = popObj();
         bigMul();
         pushObj(bip.res);
     }
     else if (opcode == div)
-    {                       // wie add
-        bip.op1 = popObj(); // vorletzte gepushte Wert nehmen
-        int wert = bigToInt();
+    {                          // wie add
+        bip.op1 = popObj();    // vorletzte gepushte Wert nehmen, in bip.op1 speichern, weil es in bigToInt benutzt ist
+        int wert = bigToInt(); // das Wert zu int umwandeln
 
         if (wert == 0) // ueberpruefen ob der Nenner gleich 0, bricht der Program ab
         {
             printf("können durch 0 nicht teilen !!");
             exit(-1);
         }
-        bip.op2 = bip.op1;
-        bip.op1 = popObj();
-        bigDiv();
+        bip.op2 = bip.op1;  // das gepoppte nenner in bip.op2 speichern
+        bip.op1 = popObj(); // zahler poppen
+        bigDiv();           //division das Ergebnis in bip.res gespeichert
         pushObj(bip.res);
     }
     else if (opcode == mod)
-    {                       // wie div
-        bip.op1 = popObj(); // vorletzte gepushte Wert nehmen
-        int wert = bigToInt();
+    { // wie div
+        bip.op1 = popObj();
+        // int wert = bigToInt();
 
-        if (wert == 0) // ueberpruefen ob der Nenner gleich 0, bricht der Program ab
-        {
-            printf("können durch 0 nicht teilen !!");
-            exit(-1);
-        }
+        // if (wert == 0)
+        // {
+        //     printf("können durch 0 nicht teilen !!");
+        //     exit(-1);
+        // }
         bip.op2 = bip.op1;
         bip.op1 = popObj();
-        bigDiv();
+        bigDiv(); //division ausfuhren, und beim Modulo brauchen das Rest von Division, das wird in bip.rem gespeichert
         pushObj(bip.rem);
     }
     else if (opcode == rdint)
     {
         int input;
         scanf("%d", &input); // Integer von stdin lesen (User-Input)
-        bigFromInt(input);
-        pushObj(bip.res); // Der gelesene Wert pushen
+        bigFromInt(input);   // Int zu big umwandeln
+        pushObj(bip.res);    // Der gelesene Object pushen
     }
     else if (opcode == wrint)
     {
-        bip.op1 = popObj();
-        bigPrint(stdout);
+        bip.op1 = popObj(); // Object in bip.op1 speichern weil bigPrint benutzt es zu ausdrucken
+        bigPrint(stdout);   // die Ausgabe auf stdout ausgeben
     }
     else if (opcode == rdchr)
     {
         int input;
-        input = getchar(); // nur erste Character vom, was der Benutzer schreibt, speichern
+        input = getchar(); // nur erste Character vom, was der Benutzer schreibt, als int speichern
         bigFromInt(input);
-        pushObj(bip.res); // Der gelesene Wert pushen
+        pushObj(bip.res);
     }
     else if (opcode == wrchr)
     {
@@ -642,7 +670,7 @@ void ausfuehrung(int instruktion)
     else if (opcode == pushg) // Mit hilfe von Global-VAriablen in SDA arbeiten:
     {
         ObjRef sdaObj;
-        sdaObj = staticDataArea[immediateWert]; // wert aus dem SDA (gewünschten Platz) holen
+        sdaObj = staticDataArea[immediateWert]; // ObjectRef aus dem SDA (gewünschten Platz) holen
         pushObj(sdaObj);                        // der Wert auf dem Stack pushen
     }
     else if (opcode == popg) // Mit hilfe von Global-VAriablen in SDA arbeiten:
@@ -656,7 +684,7 @@ void ausfuehrung(int instruktion)
         push(framePointer);                          // der jetztige framePointer in dem Stack speichern
         framePointer = stackPointer;                 // framePointer auf dem Stackpointer-Position legen
         stackPointer = stackPointer + immediateWert; // Stackpointer setzen auf wie viele Plätze,die von dem Programm gelesen werden, plus den Platz der Stackpointer
-        //alle slots zwischen fp und sp(Stack-Frame) mussen mit nill gesetzt werden
+        //alle slots zwischen fp und sp(Stack-Frame) mussen mit nill gesetzt werden, um falsche zugrief zu vermeiden
         for (int i = framePointer; i < stackPointer; i++)
         {
             stack[i].isObjRef = true;
@@ -679,14 +707,15 @@ void ausfuehrung(int instruktion)
     {
         int gewunPos;
         gewunPos = framePointer + immediateWert; // gewunschte Position ereichen
-        stack[gewunPos].u.ObjRef = popObj();     // der Wert in dem gewunschten Platz im Stack-Frame speichern
+        stack[gewunPos].isObjRef = true;
+        stack[gewunPos].u.ObjRef = popObj(); // der Wert in dem gewunschten Platz im Stack-Frame speichern
     }
     else if (opcode == eq) // die 2 Werte sind gleich
     {
         bip.op2 = popObj();
         bip.op1 = popObj();
-        ergebnis = bigCmp();
-        bigFromInt(ergebnis == 0);
+        ergebnis = bigCmp();       //beide Objects vergleichen und die ruckgabe ist ein int wert
+        bigFromInt(ergebnis == 0); // wenn die ObjRef gleich sind dann bekommen wir 0 zuruck (beim true wird ObjRef auf 1)
         pushObj(bip.res);
     }
     else if (opcode == ne) // die 2 Werte nicht gleich
@@ -694,7 +723,7 @@ void ausfuehrung(int instruktion)
         bip.op2 = popObj();
         bip.op1 = popObj();
         ergebnis = bigCmp();
-        bigFromInt(ergebnis != 0);
+        bigFromInt(ergebnis != 0); // wenn die ObjRef ungleich sind dann bekommen wir wert ungleich 0 zuruck (beim true wird ObjRef auf 1)
         pushObj(bip.res);
     }
     else if (opcode == lt) // der 2 gepopte-Wert ist kleiner als 1 gepopte-Wert
@@ -702,7 +731,7 @@ void ausfuehrung(int instruktion)
         bip.op2 = popObj();
         bip.op1 = popObj();
         ergebnis = bigCmp();
-        bigFromInt(ergebnis < 0);
+        bigFromInt(ergebnis < 0); // wenn die ObjRef ungleich sind dann bekommen wir wert kleiner 0 zuruck (beim true wird ObjRef auf 1)
         pushObj(bip.res);
     }
     else if (opcode == le) // der 2 gepopte-Wert ist kleiner oder gleich als 1 gepopte-Wert
@@ -710,7 +739,7 @@ void ausfuehrung(int instruktion)
         bip.op2 = popObj();
         bip.op1 = popObj();
         ergebnis = bigCmp();
-        bigFromInt(ergebnis <= 0);
+        bigFromInt(ergebnis <= 0); // wenn die ObjRef ungleich sind dann bekommen wir wert kleiner oder gleich 0 zuruck (beim true wird ObjRef auf 1)
         pushObj(bip.res);
     }
     else if (opcode == gt) // der 2 gepopte-Wert ist grosser als 1 gepopte-Wert
@@ -718,7 +747,7 @@ void ausfuehrung(int instruktion)
         bip.op2 = popObj();
         bip.op1 = popObj();
         ergebnis = bigCmp();
-        bigFromInt(ergebnis > 0);
+        bigFromInt(ergebnis > 0); // wenn die ObjRef ungleich sind dann bekommen wir wert grosser 0 zuruck (beim true wird ObjRef auf 1)
         pushObj(bip.res);
     }
     else if (opcode == ge) // der 2 gepopte-Wert ist grosser oder gleich als 1 gepopte-Wert
@@ -726,7 +755,7 @@ void ausfuehrung(int instruktion)
         bip.op2 = popObj();
         bip.op1 = popObj();
         ergebnis = bigCmp();
-        bigFromInt(ergebnis >= 0);
+        bigFromInt(ergebnis >= 0); // wenn die ObjRef ungleich sind dann bekommen wir wert grosser oder gleich 0 zuruck (beim true wird ObjRef auf 1)
         pushObj(bip.res);
     }
     else if (opcode == jmp) // springen zum gewahlten PLatz in Intsruktionen-Liste
@@ -772,37 +801,38 @@ void ausfuehrung(int instruktion)
     {
         stackPointer = stackPointer - immediateWert;
     }
-    else if (opcode == pushr) // der gespeicherten Wert im Return Value Register auf dem Stack pushen
+    else if (opcode == pushr) // der gespeicherten ObjRef im Return Value Register auf dem Stack pushen
     {
         pushObj(valueRegister);
     }
-    else if (opcode == popr) // der aus dem Stack gepopten Wert im Return Value Register speichern
+    else if (opcode == popr) // der aus dem Stack gepopten ObjRef im Return Value Register speichern
     {
-        valueRegister = popObj();
+        valueRegister = popObj(); // ObjRef in Return Value Register speichern
     }
     else if (opcode == dup) // der letzten Wert im Stack duplitizieren
     {
         ObjRef objWert;
-        objWert = popObj();
+        objWert = popObj(); // Top of Stack ObjRef nehmen
+        // der ObjRef zweimal auf dem Stack pushen
         pushObj(objWert);
         pushObj(objWert);
     }
-    else if (opcode == new)
+    else if (opcode == new) // new Record erzeugen
     {
-        pushObj(newCmpObj(immediateWert));
+        pushObj(newCmpObj(immediateWert)); //neues Compound Object auf dem Stack liegen
     }
 
-    else if (opcode == getf)
+    else if (opcode == getf) // Die im Verbundobjekt object an Position <n> enthaltene Referenz auf ein Objekt value wird auf dem Stack pushen
     {
         ObjRef verbundObj;
-        verbundObj = popObj();
+        verbundObj = popObj(); // ein Compound Object aus dem Stack nehmen
         // überprufen ob es ungleich NULL ist (kein nil wert)
         if (verbundObj == NULL)
         {
             printf("NULL Verbundobject!!\n");
             exit(-1);
         }
-        // überpruefen dass das wert drin ein ObjRef ist und nicht ein primitiv wert ist
+        // überpruefen dass es ein Compound Object ist und kein Primitives Object ist
         if (IS_PRIMITIVE(verbundObj))
         {
             printf("Es ist ein primitives Wert !!!\n");
@@ -814,13 +844,15 @@ void ausfuehrung(int instruktion)
             printf("Keine genuge ObjRef in das verbundobj !!!\n");
             exit(-1);
         }
-
+        // das gewunschte ObjRef in das Compound Object auf dem Stack pushen
         pushObj(GET_REFS_PTR(verbundObj)[immediateWert]);
     }
-    else if (opcode == putf)
+    else if (opcode == putf) // Die Referenz auf ein Objekt value wird im Verbundobjekt object an Position <n> speichern
     {
+        // der Primitives ObjRef in dem Compound Object gespeichert werden soll poppen
         ObjRef valueVonStack;
         valueVonStack = popObj();
+        // der Compound Object in dem, der Primitives Object gespeichert werden soll, aus dem Stack nehmen
         ObjRef verbundObj;
         verbundObj = popObj();
         // überprufen ob es ungleich NULL ist (kein nil wert)
@@ -829,7 +861,7 @@ void ausfuehrung(int instruktion)
             printf("NULL Verbundobject!!\n");
             exit(-1);
         }
-        // überpruefen dass das wert drin ein ObjRef ist und nicht ein primitiv wert ist
+        // überpruefen dass es ein Compound Object ist und kein Primitives Object ist
         if (IS_PRIMITIVE(verbundObj))
         {
             printf("Es ist ein primitives Wert !!!\n");
@@ -841,27 +873,23 @@ void ausfuehrung(int instruktion)
             printf("Keine genuge ObjRef in das verbundobj !!!\n");
             exit(-1);
         }
+        // das Primitives Object in das gewunschte Position in das Compound Object speichern
         GET_REFS_PTR(verbundObj)
         [immediateWert] = valueVonStack;
     }
-    else if (opcode == newa)
+    else if (opcode == newa) //Ein neues Array erzeugen
     {
         //Array-size von Stack nehmen (lokale var) und es zu int umwandeln
         bip.op1 = popObj();
         int aSize = bigToInt();
         ObjRef aObj;
         aObj = newCmpObj(aSize);
-        //weil alle Werte auf NULL beim Init gesetzt sollen
-        for (int i = 0; i < aSize; i++)
-        {
-            GET_REFS_PTR(aObj)
-            [i] = NULL;
-        }
         // das Array auf dem Stack
         pushObj(aObj);
     }
-    else if (opcode == getfa)
+    else if (opcode == getfa) //Die im Verbundobjekt array an Position index enthaltene Referenz auf ein Objekt value wird auf dem Stack pushen
     {
+        // das gleiches verhalten beim getf, nur das gewunschte index ist vom Stack genommen und nicht als Parameter beim Instruktion
         bip.op1 = popObj();
         int aIdx = bigToInt();
         ObjRef arrObj;
@@ -872,7 +900,7 @@ void ausfuehrung(int instruktion)
             printf("NULL Verbundobject!!\n");
             exit(-1);
         }
-        // überpruefen dass das wert drin ein ObjRef ist und nicht ein primitiv wert ist
+        // überpruefen dass es ein Compound Object ist und kein Primitives Object ist
         if (IS_PRIMITIVE(arrObj))
         {
             printf("Es ist ein primitives Wert !!!\n");
@@ -887,8 +915,9 @@ void ausfuehrung(int instruktion)
 
         pushObj(GET_REFS_PTR(arrObj)[aIdx]);
     }
-    else if (opcode == putfa)
+    else if (opcode == putfa) //Die Referenz auf ein Objekt value wird im Verbundobjekt array an Position index speichern
     {
+        // das gleiches verhalten beim putf, nur das gewunschte index ist vom Stack genommen und nicht als Parameter beim Instruktion
         ObjRef valueVonStack;
         valueVonStack = popObj();
         bip.op1 = popObj();
@@ -901,7 +930,7 @@ void ausfuehrung(int instruktion)
             printf("NULL Verbundobject!!\n");
             exit(-1);
         }
-        // überpruefen dass das wert drin ein ObjRef ist und nicht ein primitiv wert ist
+        // überpruefen dass es ein Compound Object ist und kein Primitives Object ist
         if (IS_PRIMITIVE(arrObj))
         {
             printf("Es ist ein primitives Wert !!!\n");
@@ -916,7 +945,7 @@ void ausfuehrung(int instruktion)
         GET_REFS_PTR(arrObj)
         [aIdx] = valueVonStack;
     }
-    else if (opcode == getsz)
+    else if (opcode == getsz) // ObjRef-Size berechnen und das Ergebnis auf dem Stack pushen
     {
         ObjRef objWert;
         objWert = popObj();
@@ -927,33 +956,37 @@ void ausfuehrung(int instruktion)
             printf("NULL Verbundobject!!\n");
             exit(-1);
         }
-        // überpruefen dass das wert drin ein ObjRef ist und nicht ein primitiv wert ist
+        // wenn dass das wert drin ein Primitives ObjRef ist
         if (IS_PRIMITIVE(objWert))
         {
             ergebnis = -1;
             bigFromInt(ergebnis);
             pushObj(bip.res);
         }
+        // wenn dass das wert drin ein Compound ObjRef ist
         else
         {
+            // die Elemente Anzahl in das Compound Object kriegen
             ergebnis = GET_ELEMENT_COUNT(objWert);
+            // das int zu big umwandeln und auf dem Stack pushen
             bigFromInt(ergebnis);
             pushObj(bip.res);
         }
     }
-    else if (opcode == pushn)
+    else if (opcode == pushn) // NULL ObjRef pushen
     {
+        // ein NULL ObjRef auf dem Stack pushen
         pushObj(NULL);
     }
-    else if (opcode == refeq)
+    else if (opcode == refeq) // uberpruefen ob die Reference gleich sind
     {
-        int ergebnis = (popObj() == popObj());
+        int ergebnis = (popObj() == popObj()); // die referencen vergleichen, wenn sie gleich sind -> true, ungleich -> false
         bigFromInt(ergebnis);
         pushObj(bip.res);
     }
-    else if (opcode == refne)
+    else if (opcode == refne) // uberpruefen ob die Reference ungleich sind
     {
-        int ergebnis = (popObj() != popObj());
+        int ergebnis = (popObj() != popObj()); // die referencen vergleichen, wenn sie ungleich sind -> true, gleich -> false
         bigFromInt(ergebnis);
         pushObj(bip.res);
     }
@@ -971,9 +1004,14 @@ int main(int argc, char *argv[])
             if (strcmp(argv[i], "--help") == 0) // Hilfe ausdrucken (wie die VM funktioniert bzw- benutzt werden soll)
             {
                 printf("usage: ./njvm [options] <code file>\n");
+                printf(" --stack <n>      set stack size to n KBytes (default: n = 64)\n");
+                printf(" --heap <n>       set heap size to n KBytes (default: n = 8192)\n");
+                printf(" --gcstats        show garbage collection statistics\n");
+                printf(" --gcpurge        purge old objects after collection\n");
                 printf(" --debug          start virtual machine in debug mode\n");
                 printf(" --version        show version and exit\n");
                 printf(" --help           show this help and exit\n");
+
                 exit(0);
             }
             else if (strcmp(argv[i], "--version") == 0) // VM-Version ausdrucken und wann ist die compiliert war
@@ -981,17 +1019,23 @@ int main(int argc, char *argv[])
                 printf("Ninja Virtual Machine Version %d (compiled Oct 14 2020, 22:54:23)\n", version);
                 exit(0);
             }
-            else if (strcmp(argv[i], "--stack") == 0) // VM-Version ausdrucken und wann ist die compiliert war
+            else if (strcmp(argv[i], "--stack") == 0) // hier nicht implementiert
             {
                 i++;
-                printf("--stack\n");
+                stackSize = (unsigned int)strtol(argv[i], NULL, 10);
             }
-            else if (strcmp(argv[i], "--heap") == 0) // VM-Version ausdrucken und wann ist die compiliert war
+            else if (strcmp(argv[i], "--heap") == 0) // hier nicht implementiert
             {
                 i++;
-                printf("--heap\n");
+                heapSize = (unsigned int)strtol(argv[i], NULL, 10);
             }
-            else if (strcmp(argv[i], "--debug") == 0) // debugger starten
+            else if (strcmp(argv[i], "--gcstats") == 0) // hier nicht implementiert
+            {
+            }
+            else if (strcmp(argv[i], "--gcpurge") == 0) // hier nicht implementiert
+            {
+            }
+            else if (strcmp(argv[i], "--debug") == 0) // debugger zum start stellen
             {
                 debugFlag = true;
             }
@@ -1000,7 +1044,7 @@ int main(int argc, char *argv[])
                 printf("unknown command line argument '%s', try './njvm --help'\n", argv[i]);
                 exit(-1);
             }
-            else
+            else // filename speichern, wenn mehr als ein name gegeben ist, dann das Programm stoppen
             {
                 fileCount = fileCount + 1;
                 if (fileCount > 1)
@@ -1017,15 +1061,17 @@ int main(int argc, char *argv[])
     {
         printf("Error: no code file specified\n");
     }
-    if (debugFlag)
+    if (debugFlag) // wenn Debugger zum start gestellt ist
     {
         binFileOffnen(fileName);
+        // debugger starten
         debugger();
     }
     else
     {
         binFileOffnen(fileName); // der als parameter gegebene Programm öffnen
         printf("Ninja Virtual Machine started\n");
+        // das Programm laufen lassen
         while (1)
         {
             instruction = programmSpeicher[programmCounter];
