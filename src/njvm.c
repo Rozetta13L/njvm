@@ -612,41 +612,26 @@ void ausfuehrung(int instruktion)
         pushObj(bip.res);
     }
     else if (opcode == div)
-    {                          // wie add
-        bip.op1 = popObj();    // vorletzte gepushte Wert nehmen, in bip.op1 speichern, weil es in bigToInt benutzt ist
-        int wert = bigToInt(); // das Wert zu int umwandeln
-
-        if (wert == 0) // ueberpruefen ob der Nenner gleich 0, bricht der Program ab
-        {
-            printf("können durch 0 nicht teilen !!");
-            exit(-1);
-        }
-        bip.op2 = bip.op1;  // das gepoppte nenner in bip.op2 speichern
+    {
+        bip.op2 = popObj(); // Nenner poppen
         bip.op1 = popObj(); // zahler poppen
-        bigDiv();           //division das Ergebnis in bip.res gespeichert
+        // in die bigDiv wird geprüft ob der nenner = 0 ist
+        bigDiv(); //division das Ergebnis in bip.res gespeichert
         pushObj(bip.res);
     }
     else if (opcode == mod)
-    { // wie div
+    {
+        // wie div
+        bip.op2 = popObj();
         bip.op1 = popObj();
-        // int wert = bigToInt();
-
-        // if (wert == 0)
-        // {
-        //     printf("können durch 0 nicht teilen !!");
-        //     exit(-1);
-        // }
-        bip.op2 = bip.op1;
-        bip.op1 = popObj();
+        // in die bigDiv wird geprüft ob der nenner = 0 ist
         bigDiv(); //division ausfuhren, und beim Modulo brauchen das Rest von Division, das wird in bip.rem gespeichert
         pushObj(bip.rem);
     }
     else if (opcode == rdint)
     {
-        int input;
-        scanf("%d", &input); // Integer von stdin lesen (User-Input)
-        bigFromInt(input);   // Int zu big umwandeln
-        pushObj(bip.res);    // Der gelesene Object pushen
+        bigRead(stdin);
+        pushObj(bip.res); // Der gelesene Object pushen
     }
     else if (opcode == wrint)
     {
