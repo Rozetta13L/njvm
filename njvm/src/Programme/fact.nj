@@ -1,0 +1,29 @@
+// factor from a number
+
+void main() {
+  local Integer n;
+  local Integer m;
+  local Integer zahl;
+  n = 100;
+  m = 1;
+  zahl = 1;
+  while (zahl <= n) {
+   m = m*zahl;
+   zahl = zahl + 1;
+  }
+  writeInteger(n);
+  writeCharacter('!');
+  writeCharacter(' ');
+  writeCharacter('=');
+  writeCharacter(' ');
+  writeInteger(m);
+  writeCharacter('\n');
+}
+
+Integer factorial(Integer n) {
+  if (n == 0) {
+    return 1;
+  } else {
+    return n * factorial(n - 1);
+  }
+}

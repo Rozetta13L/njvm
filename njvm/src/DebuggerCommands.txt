@@ -2,7 +2,7 @@
 NJVM-Debugger Commands: i[inspect], l[list], b[breakpoint], s[step], r[run], q[quit]
 
 1. inspect: 
-     man kann den Stack bzw. Static Data Area-Inhalt und alle Daten drin lesen.
+     man kann den Stack, Static Data Area, und Objekte-Inhalt und alle Daten drin lesen.
 
 2. list:
      Der, ins Memory,geladete Ninja-Programm Drucken

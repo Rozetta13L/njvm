@@ -128,9 +128,17 @@ void push(int wert)
 // Reference auf ein Object, der auf dem Heap steht
 void pushObj(ObjRef obj)
 {
-    stack[stackPointer].isObjRef = true; // wert ist ein reference auf Object
-    stack[stackPointer].u.ObjRef = obj;  // der umgewandelte int zu big wert auf dem Stack
-    stackPointer = stackPointer + 1;     // Stackpointer zeigt auf dem naechsten freien Platz
+    if (stackPointer > (stackSize * stackSize)) // Der Stack ist voll, keine Werte können mehr drin gespeichert werden
+    {
+        printf("STACKUEBERLAUF !!!\n");
+        exit(-1);
+    }
+    else
+    {
+        stack[stackPointer].isObjRef = true; // wert ist ein reference auf Object
+        stack[stackPointer].u.ObjRef = obj;  // der umgewandelte int zu big wert auf dem Stack
+        stackPointer = stackPointer + 1;     // Stackpointer zeigt auf dem naechsten freien Platz
+    }
 }
 
 // Der Wert aus dem Stack nehmen, ein int wert kein reference auf Object
@@ -630,7 +638,7 @@ void ausfuehrung(int instruktion)
     }
     else if (opcode == rdint)
     {
-        bigRead(stdin);
+        bigRead(stdin);   // das Ergebnis wird in bip.res gespeichert
         pushObj(bip.res); // Der gelesene Object pushen
     }
     else if (opcode == wrint)
@@ -642,14 +650,14 @@ void ausfuehrung(int instruktion)
     {
         int input;
         input = getchar(); // nur erste Character vom, was der Benutzer schreibt, als int speichern
-        bigFromInt(input);
+        bigFromInt(input); // zu big wandeln, das Ergebis in bip.res gespeichert
         pushObj(bip.res);
     }
     else if (opcode == wrchr)
     {
         char ausgabe;
         bip.op1 = popObj();
-        ausgabe = (char)bigToInt(); // der Wert zur Datentyp Character wandeln
+        ausgabe = (char)bigToInt(); // der umgewandelte Int-Wert zur Datentyp Character wandeln
         printf("%c", ausgabe);
     }
     else if (opcode == pushg) // Mit hilfe von Global-VAriablen in SDA arbeiten:
@@ -1007,12 +1015,10 @@ int main(int argc, char *argv[])
             else if (strcmp(argv[i], "--stack") == 0) // hier nicht implementiert
             {
                 i++;
-                stackSize = (unsigned int)strtol(argv[i], NULL, 10);
             }
             else if (strcmp(argv[i], "--heap") == 0) // hier nicht implementiert
             {
                 i++;
-                heapSize = (unsigned int)strtol(argv[i], NULL, 10);
             }
             else if (strcmp(argv[i], "--gcstats") == 0) // hier nicht implementiert
             {

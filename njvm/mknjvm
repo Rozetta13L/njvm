@@ -10,7 +10,7 @@
 # is called njvm and is located in the same directory as this script mknjvm.
 
 # The following line is an example for 
-echo gcc -g -Wall -std=c99 -pedantic -I./bigint/build/include -L./bigint/build/lib njvm.c -l bigint -o njvm
+echo gcc -g -Wall -std=c99 -pedantic -I.src/bigint/build/include -L.src/bigint/build/lib -lbigint src/njvm.c -o njvm
 
-gcc -g -Wall -std=c99 -pedantic -I./bigint/build/include -L./bigint/build/lib njvm.c -lbigint -o njvm
+gcc -g -Wall -std=c99 -pedantic -I./src/bigint/build/include -L./src/bigint/build/lib src/njvm.c -lbigint -o njvm 
 

@@ -1,0 +1,67 @@
+// summe alle Bruchen
+
+void main() {
+  local Integer zahlerA;
+  local Integer nennerA;
+  local Integer zahlerB;
+  local Integer nennerB;
+  local Integer neuZahler;
+  local Integer neuNenner;
+  local Integer gcD;
+  zahlerA = 1;
+  nennerA = 1;
+  zahlerB = 1;
+  nennerB = 2;
+  while ( nennerB <= 100 ) {
+    neuZahler = ( zahlerA * nennerB ) + ( zahlerB * nennerA );
+    neuNenner = nennerA * nennerB;
+    gcD = gcd( neuZahler, neuNenner );
+    neuZahler = neuZahler / gcD;
+    neuNenner = neuNenner / gcD;
+    nennerB = nennerB + 1;
+    zahlerA = neuZahler;
+    nennerA = neuNenner;
+    writeInteger(neuZahler);
+    writeCharacter(' ');
+    writeCharacter('/');
+    writeCharacter(' ');
+    writeInteger(neuNenner);
+    writeCharacter('\n');
+  }
+  writeInteger(1);
+  writeCharacter('/');
+  writeCharacter('i');
+  writeCharacter(',');
+  writeCharacter('i');
+  writeCharacter('=');
+  writeInteger(1);
+  writeCharacter(',');
+  writeCharacter('.');
+  writeCharacter('.');
+  writeCharacter('.');
+  writeCharacter(',');
+  writeInteger(100);
+  writeCharacter('\n');
+  writeCharacter('s');
+  writeCharacter('u');
+  writeCharacter('m');
+  writeCharacter('m');
+  writeCharacter('e');
+  writeCharacter(' ');
+  writeCharacter('=');
+  writeCharacter(' ');
+  writeInteger(neuZahler);
+  writeCharacter(' ');
+  writeCharacter('/');
+  writeCharacter(' ');
+  writeInteger(neuNenner);
+  writeCharacter('\n');
+}
+
+Integer gcd(Integer a, Integer b) {
+  local Integer h;
+  if(a % b == 0) {
+    return b;
+  }
+  return gcd(b, a%b);
+}
